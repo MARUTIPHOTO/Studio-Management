@@ -1,0 +1,6 @@
+{
+  "name": "Studio Management",
+  "description": "Event booking, customer management, crew scheduling, and event reminders for Studio Management in India.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

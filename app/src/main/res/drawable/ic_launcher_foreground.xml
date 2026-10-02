@@ -1,0 +1,35 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Camera Body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,36 L40,30 L68,30 L74,36 L82,36 C85.3,36 88,38.7 88,42 L88,74 C88,77.3 85.3,80 82,80 L26,80 C22.7,80 20,77.3 20,74 L20,42 C20,38.7 22.7,36 26,36 Z" />
+    
+    <!-- Camera Lens Outer Ring (Primary Red) -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M54,58m-17,0a17,17 0 1,0 34,0a17,17 0 1,0 -34,0" />
+
+    <!-- Lens Inner Glass -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,58m-12,0a12,12 0 1,0 24,0a12,12 0 1,0 -24,0" />
+
+    <!-- Lens Center Pupil -->
+    <path
+        android:fillColor="#E53935"
+        android:pathData="M54,58m-6,0a6,6 0 1,0 12,0a6,6 0 1,0 -12,0" />
+
+    <!-- Lens Glint -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,54m-2.5,0a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0" />
+
+    <!-- Studio Flash / Viewfinder Element -->
+    <path
+        android:fillColor="#FFD54F"
+        android:pathData="M74,42 L79,42 A2,2 0 0 1 81,44 L81,47 A2,2 0 0 1 79,49 L74,49 A2,2 0 0 1 72,47 L72,44 A2,2 0 0 1 74,42 Z" />
+</vector>
