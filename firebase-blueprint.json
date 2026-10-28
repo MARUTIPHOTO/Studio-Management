@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Studio owner profile and preferences",
+      "type": "object",
+      "properties": {
+        "studioName": { "type": "string", "description": "Name of the photo studio" },
+        "ownerName": { "type": "string", "description": "Studio owner full name" },
+        "mobileNumber": { "type": "string", "description": "Studio contact phone number" },
+        "whatsAppNumber": { "type": "string", "description": "Studio WhatsApp number" },
+        "address": { "type": "string", "description": "Studio address" },
+        "logoUri": { "type": "string", "description": "URI/URL of studio logo" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["studioName", "ownerName", "mobileNumber"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer managed by studio owner",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Customer ID" },
+        "userId": { "type": "string", "description": "UID of studio owner who owns this customer" },
+        "name": { "type": "string", "description": "Customer full name" },
+        "mobile": { "type": "string", "description": "Customer mobile phone number" },
+        "note": { "type": "string", "description": "Optional notes or requirements" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "name", "mobile"]
+    },
+    "EventBooking": {
+      "title": "EventBooking",
+      "description": "Photo/video event booking details for a customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique booking document ID" },
+        "userId": { "type": "string", "description": "UID of studio owner who owns this booking" },
+        "customerId": { "type": "string", "description": "Associated customer ID" },
+        "customerName": { "type": "string", "description": "Customer full name" },
+        "customerMobile": { "type": "string", "description": "Customer mobile number" },
+        "eventName": { "type": "string", "description": "Type of event (Wedding, Pre-Wedding, Birthday, etc.)" },
+        "eventDate": { "type": "string", "description": "Formatted event date string" },
+        "eventDateMillis": { "type": "integer", "description": "Event timestamp in milliseconds" },
+        "eventTime": { "type": "string", "description": "Event time string" },
+        "eventLocation": { "type": "string", "description": "Venue / location of event" },
+        "crewIdsCsv": { "type": "string", "description": "CSV of assigned crew member IDs" },
+        "crewNames": { "type": "string", "description": "Snapshot string of assigned crew names" },
+        "dressCodeNote": { "type": "string", "description": "Dress code or theme note" },
+        "reminderEnabled": { "type": "boolean", "description": "Whether reminder is active" },
+        "reminderPreset": { "type": "string", "description": "Preset interval for reminder" },
+        "status": { "type": "string", "description": "Upcoming or Completed status", "enum": ["Upcoming", "Completed"] },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "customerId", "customerName", "customerMobile", "eventName", "eventDate", "eventTime", "eventLocation", "status"]
+    },
+    "CrewMember": {
+      "title": "CrewMember",
+      "description": "Photographer, videographer, or assistant crew member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique crew member ID" },
+        "userId": { "type": "string", "description": "UID of studio owner who employs this crew member" },
+        "name": { "type": "string", "description": "Crew member name" },
+        "mobile": { "type": "string", "description": "Crew member phone number" },
+        "role": { "type": "string", "description": "Role (Photographer, Videographer, Drone Pilot, Editor, Assistant)" },
+        "cameraEquipment": { "type": "string", "description": "Equipment assigned or used" },
+        "note": { "type": "string", "description": "Notes on crew member" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp via serverTimestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp via serverTimestamp" }
+      },
+      "required": ["userId", "name", "mobile", "role"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Studio owner user profile document"
+    },
+    "/users/{userId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customers list owned exclusively by this studio owner"
+    },
+    "/users/{userId}/events/{eventId}": {
+      "schema": "EventBooking",
+      "description": "Event bookings owned exclusively by this studio owner"
+    },
+    "/users/{userId}/crew/{crewId}": {
+      "schema": "CrewMember",
+      "description": "Crew members directory owned exclusively by this studio owner"
+    }
+  }
+}

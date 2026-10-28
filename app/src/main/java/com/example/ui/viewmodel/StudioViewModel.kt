@@ -10,6 +10,7 @@ import com.example.data.model.Customer
 import com.example.data.model.EventBooking
 import com.example.data.model.StudioProfile
 import com.example.data.repository.StudioRepository
+import com.example.receiver.AlarmScheduler
 import com.example.ui.strings.AppLanguage
 import com.example.ui.strings.AppStrings
 import com.example.ui.strings.StringsDefinition
@@ -28,6 +29,7 @@ import java.util.Locale
 
 sealed class Screen {
     object Splash : Screen()
+    object SignIn : Screen()
     object Home : Screen()
     object AddCustomer : Screen()
     data class EditCustomer(val customerId: Long) : Screen()
@@ -39,18 +41,41 @@ sealed class Screen {
     object AddCrew : Screen()
     data class EditCrew(val crewId: Long) : Screen()
     object Settings : Screen()
+    object PrivacyPolicy : Screen()
 }
 
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
+    val authManager = com.example.data.auth.AuthManager(application)
+    val currentUser = authManager.authStateFlow().stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        authManager.currentUser
+    )
+
+    private val _isCloudSyncing = MutableStateFlow(false)
+    val isCloudSyncing: StateFlow<Boolean> = _isCloudSyncing.asStateFlow()
+
     private val repository = StudioRepository(application)
 
     private val _currentScreen = MutableStateFlow<Screen>(Screen.Splash)
     val currentScreen: StateFlow<Screen> = _currentScreen.asStateFlow()
 
+
     private val _screenStack = mutableListOf<Screen>()
 
     private val _language = MutableStateFlow(repository.getLanguage())
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
+
+    private val _isAdMobBannerEnabled = MutableStateFlow(repository.isAdMobBannerEnabled())
+    val isAdMobBannerEnabled: StateFlow<Boolean> = _isAdMobBannerEnabled.asStateFlow()
+
+    private val _showCustomerPhoneInWhatsApp = MutableStateFlow(repository.isShowCustomerPhoneInWhatsApp())
+    val showCustomerPhoneInWhatsApp: StateFlow<Boolean> = _showCustomerPhoneInWhatsApp.asStateFlow()
+
+    fun setShowCustomerPhoneInWhatsApp(show: Boolean) {
+        _showCustomerPhoneInWhatsApp.value = show
+        repository.setShowCustomerPhoneInWhatsApp(show)
+    }
 
     private val _studioProfile = MutableStateFlow(repository.getStudioProfile())
     val studioProfile: StateFlow<StudioProfile> = _studioProfile.asStateFlow()
@@ -397,6 +422,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
                 val id = repository.insertEvent(event)
                 val saved = event.copy(id = id)
                 newlySavedEvent = saved
+                scheduleEventReminder(saved)
                 onSuccess(saved)
             } catch (e: Exception) {
                 onError(strings.errSaveFailed)
@@ -412,6 +438,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 repository.updateEvent(event)
+                scheduleEventReminder(event)
                 onSuccess()
             } catch (e: Exception) {
                 onError(strings.errSaveFailed)
@@ -426,15 +453,56 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             EventBooking.STATUS_COMPLETED
         }
         viewModelScope.launch {
-            repository.updateEvent(event.copy(status = newStatus))
+            val updated = event.copy(status = newStatus)
+            repository.updateEvent(updated)
+            scheduleEventReminder(updated)
         }
     }
 
     fun deleteEvent(event: EventBooking, onDeleted: () -> Unit = {}) {
         viewModelScope.launch {
+            AlarmScheduler.cancelAlarmForReminder(getApplication(), event.id)
             repository.deleteEvent(event)
             onDeleted()
         }
+    }
+
+    private fun scheduleEventReminder(event: EventBooking) {
+        if (!event.reminderEnabled || event.status == EventBooking.STATUS_COMPLETED) {
+            AlarmScheduler.cancelAlarmForReminder(getApplication(), event.id)
+            return
+        }
+
+        var eventTimeMillis = event.eventDateMillis
+        if (eventTimeMillis <= 0L && event.eventDate.isNotBlank()) {
+            try {
+                val combined = "${event.eventDate.trim()} ${event.eventTime.trim()}"
+                val sdf = SimpleDateFormat("dd MMM yyyy hh:mm a", Locale.ENGLISH)
+                eventTimeMillis = sdf.parse(combined)?.time ?: System.currentTimeMillis()
+            } catch (e: Exception) {
+                try {
+                    val sdfDate = SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH)
+                    eventTimeMillis = sdfDate.parse(event.eventDate.trim())?.time ?: System.currentTimeMillis()
+                } catch (e2: Exception) {
+                    eventTimeMillis = System.currentTimeMillis()
+                }
+            }
+        }
+
+        val reminderTimeMillis = AlarmScheduler.calculateReminderTimeMillis(
+            eventTimeInMillis = eventTimeMillis,
+            selectedOption = event.reminderPreset,
+            customSelectedTimeInMillis = event.reminderTimeMillis ?: 0L
+        )
+
+        AlarmScheduler.setAlarmForReminder(
+            context = getApplication(),
+            timeInMillis = reminderTimeMillis,
+            eventId = event.id,
+            eventName = event.eventName,
+            eventTime = event.eventTime,
+            eventLocation = event.eventLocation
+        )
     }
 
     // Crew operations
@@ -547,6 +615,11 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         _language.value = language
     }
 
+    fun setAdMobBannerEnabled(enabled: Boolean) {
+        repository.setAdMobBannerEnabled(enabled)
+        _isAdMobBannerEnabled.value = enabled
+    }
+
     fun backupData(onComplete: (String) -> Unit) {
         viewModelScope.launch {
             val json = repository.createBackupJson()
@@ -640,24 +713,86 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun getCallSheetForEvent(event: EventBooking): String {
+    fun getCallSheetForEvent(
+        event: EventBooking,
+        includeCustomerPhone: Boolean = _showCustomerPhoneInWhatsApp.value
+    ): String {
         val custEvents = allEvents.value.filter { it.customerId == event.customerId }
         return com.example.util.CallSheetHelper.generateEventCallSheet(
             profile = _studioProfile.value,
             mainEvent = event,
             allCustomerEvents = custEvents,
-            allCrew = allCrew.value
+            allCrew = allCrew.value,
+            includeCustomerPhone = includeCustomerPhone
         )
     }
 
-    fun getCallSheetForCustomer(customerId: Long): String {
+    fun getCallSheetForCustomer(
+        customerId: Long,
+        includeCustomerPhone: Boolean = _showCustomerPhoneInWhatsApp.value
+    ): String {
         val custEvents = allEvents.value.filter { it.customerId == customerId }
         val mainEvent = custEvents.firstOrNull() ?: return ""
         return com.example.util.CallSheetHelper.generateEventCallSheet(
             profile = _studioProfile.value,
             mainEvent = mainEvent,
             allCustomerEvents = custEvents,
-            allCrew = allCrew.value
+            allCrew = allCrew.value,
+            includeCustomerPhone = includeCustomerPhone
         )
     }
+
+    fun getPersonalPassForCrew(
+        crew: com.example.data.model.CrewMember,
+        event: EventBooking,
+        includeCustomerPhone: Boolean = _showCustomerPhoneInWhatsApp.value
+    ): String {
+        return com.example.util.CallSheetHelper.generateSingleEventCrewPass(
+            profile = _studioProfile.value,
+            crew = crew,
+            event = event,
+            includeCustomerPhone = includeCustomerPhone
+        )
+    }
+
+    fun getPersonalScheduleForCrew(
+        crew: com.example.data.model.CrewMember,
+        assignedEvents: List<EventBooking>,
+        includeCustomerPhone: Boolean = _showCustomerPhoneInWhatsApp.value
+    ): String {
+        return com.example.util.CallSheetHelper.generatePersonalCrewDutySchedule(
+            profile = _studioProfile.value,
+            crew = crew,
+            assignedEvents = assignedEvents,
+            includeCustomerPhone = includeCustomerPhone
+        )
+    }
+
+    fun onUserSignedIn() {
+        syncFromCloud()
+        navigateTo(Screen.Home, clearStack = true)
+    }
+
+    fun syncFromCloud() {
+        viewModelScope.launch {
+            _isCloudSyncing.value = true
+            val result = repository.syncFromCloud()
+            _isCloudSyncing.value = false
+            result.onSuccess { count ->
+                _studioProfile.value = repository.getStudioProfile()
+                _userMessage.emit("ક્લાઉડમાંથી $count આઇટમ્સ સફળતાપૂર્વક સિંક થઈ!")
+            }.onFailure { e ->
+                _userMessage.emit("ક્લાઉડ સિંકમાં ત્રુટિ: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            authManager.signOut()
+            navigateTo(Screen.SignIn, clearStack = true)
+            _userMessage.emit("સફળતાપૂર્વક સાઇન આઉટ થયું")
+        }
+    }
 }
+

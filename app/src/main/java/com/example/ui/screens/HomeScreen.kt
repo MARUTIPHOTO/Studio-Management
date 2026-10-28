@@ -28,12 +28,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,6 +75,7 @@ import com.example.ui.theme.StudioGreenSuccess
 import com.example.ui.theme.StudioLightBorder
 import com.example.ui.theme.StudioRedDark
 import com.example.ui.theme.StudioRedLight
+import com.example.ui.strings.AppStrings
 import com.example.ui.theme.StudioRedPrimary
 import com.example.ui.theme.StudioSecondaryGray
 import com.example.ui.theme.StudioSurfaceVariant
@@ -84,12 +87,16 @@ fun HomeScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { AppStrings.get(currentLang) }
     val profile by viewModel.studioProfile.collectAsState()
     val customers by viewModel.filteredCustomers.collectAsState()
     val allEvents by viewModel.allEvents.collectAsState()
     val allCrew by viewModel.allCrew.collectAsState()
     val searchQuery by viewModel.customerSearchQuery.collectAsState()
+    val isAdMobBannerEnabled by viewModel.isAdMobBannerEnabled.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
 
     var customerToDelete by remember { mutableStateOf<Customer?>(null) }
     var callSheetCustomer by remember { mutableStateOf<Customer?>(null) }
@@ -103,7 +110,8 @@ fun HomeScreen(
         // Header
         StudioHeader(
             profile = profile,
-            onCallClick = { viewModel.openDialer(profile.mobileNumber) }
+            onCallClick = { viewModel.openDialer(profile.mobileNumber) },
+            onSettingsClick = { viewModel.navigateTo(Screen.Settings) }
         )
 
         LazyColumn(
@@ -111,6 +119,132 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
+            // Google AdMob Banner Panel (Displayed right when app opens)
+            if (isAdMobBannerEnabled) {
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("home_admob_banner_card")
+                    ) {
+                        AdMobBanner(
+                            adUnitId = "ca-app-pub-3940256099942544/6300978111",
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
+            // Firebase Login / Cloud Status Banner
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                if (currentUser == null) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFCC80)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.navigateTo(Screen.SignIn) }
+                            .testTag("home_firebase_login_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFE0B2)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE65100),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Firebase લૉગિન કરો (Cloud Backup)",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color(0xFFBF360C)
+                                )
+                                Text(
+                                    text = "ગ્રાહક અને ઇવેન્ટ ડેટા હંમેશા સાચવવા લૉગિન કરો",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF6D4C41)
+                                )
+                            }
+                            Button(
+                                onClick = { viewModel.navigateTo(Screen.SignIn) },
+                                colors = ButtonDefaults.buttonColors(containerColor = StudioRedPrimary),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Text("લૉગિન", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    Card(
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA5D6A7)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("home_firebase_status_badge")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF2E7D32))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Firebase સિંક સક્રિય: ${currentUser?.displayName ?: currentUser?.email ?: "Studio"}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF1B5E20),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(
+                                onClick = { viewModel.syncFromCloud() },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = "Sync Cloud",
+                                    tint = Color(0xFF2E7D32),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Main Shortcut Buttons
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -279,13 +413,23 @@ fun HomeScreen(
         }.distinct()
         val assignedCrewMembers = allCrew.filter { it.id in allAssignedIds }
 
+        val showCustPhone by viewModel.showCustomerPhoneInWhatsApp.collectAsState()
+
         EventCallSheetModal(
             callSheetText = callSheetText,
             customerMobile = customer.mobile,
             customerName = customer.name,
             assignedCrew = assignedCrewMembers,
+            initialShowCustomerPhone = showCustPhone,
             onSendWhatsApp = { mobile, text ->
                 viewModel.openWhatsApp(mobile, text)
+            },
+            onSendCrewPersonal = { crew, showPhone ->
+                val crewEvents = customerEvents.filter { ev ->
+                    ev.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }.contains(crew.id)
+                }
+                val personalDuty = viewModel.getPersonalScheduleForCrew(crew, crewEvents, showPhone)
+                viewModel.openWhatsApp(crew.mobile, personalDuty)
             },
             onShareGeneral = { text ->
                 viewModel.shareText(text)

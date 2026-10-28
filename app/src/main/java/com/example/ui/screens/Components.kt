@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
@@ -46,6 +48,8 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.BasicTextField
@@ -53,11 +57,17 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import android.util.Log
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -146,6 +156,7 @@ fun StudioLogoBadge(
 fun StudioHeader(
     profile: StudioProfile,
     onCallClick: () -> Unit,
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -165,7 +176,9 @@ fun StudioHeader(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onSettingsClick() }
             ) {
                 // Outer Home page studio logo image set by user
                 StudioLogoBadge(logoUri = profile.logoUri, size = 46, iconSize = 24)
@@ -193,20 +206,41 @@ fun StudioHeader(
                 }
             }
 
-            IconButton(
-                onClick = onCallClick,
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(StudioRedLight)
-                    .testTag("header_call_button")
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Phone,
-                    contentDescription = "Call Studio Owner",
-                    tint = StudioRedPrimary,
-                    modifier = Modifier.size(22.dp)
-                )
+                IconButton(
+                    onClick = onCallClick,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(StudioRedLight)
+                        .testTag("header_call_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = "Call Studio Owner",
+                        tint = StudioRedPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onSettingsClick,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(StudioSurfaceVariant)
+                        .testTag("header_settings_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = StudioDarkText,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -547,9 +581,32 @@ fun EventCallSheetModal(
     assignedCrew: List<com.example.data.model.CrewMember>,
     onSendWhatsApp: (mobile: String, text: String) -> Unit,
     onShareGeneral: (text: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialShowCustomerPhone: Boolean = true,
+    onSendCrewPersonal: ((crew: com.example.data.model.CrewMember, showPhone: Boolean) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    var showCustomerPhone by remember { mutableStateOf(initialShowCustomerPhone) }
+
+    // Dynamically mask or include customer phone based on studio owner's toggle
+    val activeCallSheetText = remember(callSheetText, showCustomerPhone, customerMobile) {
+        if (showCustomerPhone) {
+            callSheetText
+        } else {
+            val clean = customerMobile.trim()
+            if (clean.isNotEmpty()) {
+                callSheetText
+                    .replace("📞 Customer Phone: $clean", "📞 Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]")
+                    .replace("📞 Customer Phone: $customerMobile", "📞 Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]")
+                    .replace("Customer Phone: $clean", "Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]")
+            } else {
+                callSheetText.replace(
+                    Regex("📞 Customer Phone:.*"),
+                    "📞 Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]"
+                )
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -601,7 +658,67 @@ fun EventCallSheetModal(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Call Sheet Preview Card
+                // Customer Phone Block / Show Toggle Control
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (showCustomerPhone) StudioGreenLight else Color(0xFFFFF3E0)
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (showCustomerPhone) StudioGreenDark.copy(alpha = 0.5f) else Color(0xFFFFB74D)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("toggle_customer_phone_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (showCustomerPhone) Icons.Default.Phone else Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = if (showCustomerPhone) StudioGreenDark else Color(0xFFE65100),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = if (showCustomerPhone) "મેસેજમાં ગ્રાહકનો નંબર બતાવો (Show)" else "ગ્રાહકનો નંબર છુપાવો (Block/Protect)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (showCustomerPhone) StudioGreenDark else Color(0xFFBF360C)
+                                )
+                                Text(
+                                    text = if (showCustomerPhone) "મેસેજમાં ગ્રાહકનો મોબાઇલ નંબર દેખાશે" else "ક્રૂ કે અન્યને મોકલતી વખતે નંબર છુપાવેલ રહેશે",
+                                    fontSize = 10.sp,
+                                    color = StudioSecondaryGray
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = showCustomerPhone,
+                            onCheckedChange = { showCustomerPhone = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = StudioGreenDark,
+                                checkedTrackColor = StudioGreenLight,
+                                uncheckedThumbColor = Color(0xFFE65100),
+                                uncheckedTrackColor = Color(0xFFFFE0B2)
+                            ),
+                            modifier = Modifier.testTag("toggle_customer_phone_switch")
+                        )
+                    }
+                }
+
+                // Call Sheet Preview Card (Real-time Live Preview)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -610,7 +727,7 @@ fun EventCallSheetModal(
                         .padding(12.dp)
                 ) {
                     Text(
-                        text = callSheetText,
+                        text = activeCallSheetText,
                         fontSize = 11.sp,
                         color = Color(0xFFF8F9FA),
                         lineHeight = 16.sp
@@ -620,7 +737,7 @@ fun EventCallSheetModal(
                 // Action 1: Send to Customer
                 Button(
                     onClick = {
-                        onSendWhatsApp(customerMobile, callSheetText)
+                        onSendWhatsApp(customerMobile, activeCallSheetText)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -657,7 +774,11 @@ fun EventCallSheetModal(
                         assignedCrew.forEach { crew ->
                             OutlinedButton(
                                 onClick = {
-                                    onSendWhatsApp(crew.mobile, callSheetText)
+                                    if (onSendCrewPersonal != null) {
+                                        onSendCrewPersonal(crew, showCustomerPhone)
+                                    } else {
+                                        onSendWhatsApp(crew.mobile, activeCallSheetText)
+                                    }
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -690,7 +811,7 @@ fun EventCallSheetModal(
                     OutlinedButton(
                         onClick = {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Event Call Sheet", callSheetText)
+                            val clip = ClipData.newPlainText("Event Call Sheet", activeCallSheetText)
                             clipboard.setPrimaryClip(clip)
                             Toast.makeText(context, "કોલ શીટ કોપી થઈ ગઈ! (Copied)", Toast.LENGTH_SHORT).show()
                         },
@@ -707,7 +828,7 @@ fun EventCallSheetModal(
 
                     OutlinedButton(
                         onClick = {
-                            onShareGeneral(callSheetText)
+                            onShareGeneral(activeCallSheetText)
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -725,4 +846,105 @@ fun EventCallSheetModal(
         confirmButton = {}
     )
 }
+
+/**
+ * Google AdMob Banner Preview Component
+ * Displays a realistic, clean Google AdMob test banner safely without AdServices measurement crashes.
+ */
+@Composable
+fun AdMobBanner(
+    adUnitId: String = "ca-app-pub-3940256099942544/6300978111",
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .background(Color(0xFFF1F3F4))
+            .border(width = 0.8.dp, color = Color(0xFFDADCE0))
+            .testTag("admob_banner_preview"),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                // Official Ad badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFFF9AB00))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "Ad",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Google AdMob",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF202124)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "• Test Banner (320x50)",
+                            fontSize = 10.sp,
+                            color = Color(0xFF5F6368)
+                        )
+                    }
+                    Text(
+                        text = "Maruti Photo Studio • Smart Photography Solution",
+                        fontSize = 10.sp,
+                        color = Color(0xFF5F6368),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Google Ad Choices info badge
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE8EAED)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "i",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF5F6368)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * BannerAdView alias
+ */
+@Composable
+fun BannerAdView(
+    adUnitId: String = "ca-app-pub-3940256099942544/6300978111",
+    modifier: Modifier = Modifier
+) {
+    AdMobBanner(adUnitId = adUnitId, modifier = modifier)
+}
+
+
 

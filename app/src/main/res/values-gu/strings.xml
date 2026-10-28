@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">સ્ટુડિયો મેનેજમેન્ટ</string>
+
+    <!-- Date and Time Picker strings (Gujarati) -->
+    <string name="select_date">તારીખ પસંદ કરો</string>
+    <string name="select_time">સમય પસંદ કરો</string>
+
+    <!-- Quick Event Name strings (Gujarati) -->
+    <string name="event_wedding">લગ્ન</string>
+    <string name="event_haldi">હળદી</string>
+    <string name="event_reception">રીસેપ્શન</string>
+    <string name="event_birthday">જન્મદિવસ</string>
+    <string name="event_sangeet">સંગીત</string>
+    <string name="event_ring_ceremony">સગાઈ</string>
+    <string name="event_pre_wedding">પ્રી-વેડિંગ</string>
+
+    <!-- Studio Profile Section strings (Gujarati) -->
+    <string name="studio_profile_header">સ્ટુડિયો પ્રોફાઇલ</string>
+    <string name="studio_logo_subtitle">Logo / ફોટો સેટ કરો (હોમ પેજ પર દેખાશે)</string>
+    <string name="set_logo">Set Logo (ફોટો સેટ કરો)</string>
+    <string name="change_logo">Change Logo (ફોટો બદલો)</string>
+    <string name="remove_logo">દૂર કરો (Remove)</string>
+    <string name="studio_name_label">સ્ટુડિયોનું નામ</string>
+    <string name="owner_name_label">માલિકનું નામ</string>
+    <string name="mobile_number_label">મોબાઈલ નંબર</string>
+    <string name="whatsapp_number_label">વ્હોટ્સએપ નંબર</string>
+    <string name="full_address_label">પૂરું સરનામું</string>
+    <string name="save_settings_btn">સેટિંગ્સ સાચવો</string>
+    <string name="settings_saved_toast">સેટિંગ્સ સફળતાપૂર્વક સાચવવામાં આવી!</string>
+</resources>

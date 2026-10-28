@@ -1,3 +1,36 @@
 <resources>
     <string name="app_name">Studio Management</string>
+
+    <!-- Date and Time Picker strings -->
+    <string name="select_date">Select Date</string>
+    <string name="select_time">Select Time</string>
+
+    <!-- Quick Event Name strings -->
+    <string name="event_wedding">Wedding</string>
+    <string name="event_haldi">Haldi</string>
+    <string name="event_reception">Reception</string>
+    <string name="event_birthday">Birthday</string>
+    <string name="event_sangeet">Sangeet</string>
+    <string name="event_ring_ceremony">Ring Ceremony</string>
+    <string name="event_pre_wedding">Pre-Wedding</string>
+
+    <!-- Studio Profile Section strings -->
+    <string name="studio_profile_header">Studio Profile</string>
+    <string name="studio_logo_subtitle">Set logo / photo (shows on home page)</string>
+    <string name="set_logo">Set Logo</string>
+    <string name="change_logo">Change Logo</string>
+    <string name="remove_logo">Remove</string>
+    <string name="studio_name_label">Studio Name</string>
+    <string name="owner_name_label">Owner Name</string>
+    <string name="mobile_number_label">Mobile Number</string>
+    <string name="whatsapp_number_label">WhatsApp Number</string>
+    <string name="full_address_label">Full Address</string>
+    <string name="save_settings_btn">Save Settings</string>
+    <string name="settings_saved_toast">Settings saved successfully!</string>
+
+    <!-- Firebase configuration strings -->
+    <string name="google_app_id" translatable="false">1:349418114396:android:dba3fd36151863cb1d8599</string>
+    <string name="gcm_defaultSenderId" translatable="false">349418114396</string>
+    <string name="project_id" translatable="false">gen-lang-client-0524337453</string>
+    <string name="default_web_client_id" translatable="false">349418114396-dsic9m4shk9j1tatmugidqld9hgm8r4q.apps.googleusercontent.com</string>
 </resources>

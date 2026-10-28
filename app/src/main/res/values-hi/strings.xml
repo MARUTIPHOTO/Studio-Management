@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">स्टूडियो मैनेजमेंट</string>
+
+    <!-- Date and Time Picker strings (Hindi) -->
+    <string name="select_date">तारीख चुनें</string>
+    <string name="select_time">समय चुनें</string>
+
+    <!-- Quick Event Name strings (Hindi) -->
+    <string name="event_wedding">विवाह</string>
+    <string name="event_haldi">हल्दी</string>
+    <string name="event_reception">रिसेप्शन</string>
+    <string name="event_birthday">जन्मदिन</string>
+    <string name="event_sangeet">संगीत</string>
+    <string name="event_ring_ceremony">सगाई</string>
+    <string name="event_pre_wedding">प्री-वेडिंग</string>
+
+    <!-- Studio Profile Section strings (Hindi) -->
+    <string name="studio_profile_header">स्टूडियो प्रोफ़ाइल</string>
+    <string name="studio_logo_subtitle">Logo / फोटो सेट करें (होम पेज पर दिखेगा)</string>
+    <string name="set_logo">Logo सेट करें</string>
+    <string name="change_logo">Logo बदलें</string>
+    <string name="remove_logo">हटाएं</string>
+    <string name="studio_name_label">स्टूडियो का नाम</string>
+    <string name="owner_name_label">मालिक का नाम</string>
+    <string name="mobile_number_label">मोबाइल नंबर</string>
+    <string name="whatsapp_number_label">व्हाट्सएप नंबर</string>
+    <string name="full_address_label">पूरा पता</string>
+    <string name="save_settings_btn">सेटिंग्स सहेजें</string>
+    <string name="settings_saved_toast">सेटिंग्स सफलतापूर्वक सहेजी गईं!</string>
+</resources>

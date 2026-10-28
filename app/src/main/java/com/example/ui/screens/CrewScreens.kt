@@ -1,6 +1,27 @@
 package com.example.ui.screens
 
+import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.provider.ContactsContract
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -300,10 +321,14 @@ fun CrewHomeScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val crewList by viewModel.filteredCrew.collectAsState()
     val searchQuery by viewModel.crewSearchQuery.collectAsState()
+    val allEvents by viewModel.allEvents.collectAsState()
+    val showCustPhone by viewModel.showCustomerPhoneInWhatsApp.collectAsState()
     var crewToDelete by remember { mutableStateOf<CrewMember?>(null) }
+    var crewForPersonalDuty by remember { mutableStateOf<CrewMember?>(null) }
 
     BackHandler {
         viewModel.navigateBack()
@@ -413,8 +438,7 @@ fun CrewHomeScreen(
                         onDelete = { crewToDelete = crew },
                         onCall = { viewModel.openDialer(crew.mobile) },
                         onWhatsApp = {
-                            val msg = "નમસ્તે ${crew.name}, સ્ટુડિયોમાંથી ઇવેન્ટ શિડ્યુલ બાબતે સંપર્ક કરું છું."
-                            viewModel.openWhatsApp(crew.mobile, msg)
+                            crewForPersonalDuty = crew
                         },
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
@@ -441,6 +465,381 @@ fun CrewHomeScreen(
             isDestructive = true
         )
     }
+
+    // WhatsApp Personal Duty Schedule Modal for Crew
+    crewForPersonalDuty?.let { crew ->
+        CrewPersonalDutyWhatsAppModal(
+            crew = crew,
+            allEvents = allEvents,
+            viewModel = viewModel,
+            initialShowCustomerPhone = showCustPhone,
+            onDismiss = { crewForPersonalDuty = null }
+        )
+    }
+}
+
+/**
+ * Interactive Dialog to generate and send strictly personal duty details to a crew member on WhatsApp.
+ * Ensures NO other crew member's details are included in the message.
+ */
+@Composable
+fun CrewPersonalDutyWhatsAppModal(
+    crew: CrewMember,
+    allEvents: List<com.example.data.model.EventBooking>,
+    viewModel: StudioViewModel,
+    initialShowCustomerPhone: Boolean = true,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var showCustomerPhone by remember { mutableStateOf(initialShowCustomerPhone) }
+
+    // Filter events where this crew member is assigned
+    val assignedEvents = remember(crew, allEvents) {
+        allEvents.filter { ev ->
+            val ids = ev.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }
+            ids.contains(crew.id)
+        }.sortedBy { it.eventDateMillis }
+    }
+
+    var selectedMode by remember { mutableStateOf(if (assignedEvents.size > 1) "all" else "single") }
+    var selectedEventId by remember(assignedEvents) {
+        mutableStateOf(assignedEvents.firstOrNull()?.id ?: -1L)
+    }
+
+    val selectedEvent = assignedEvents.find { it.id == selectedEventId } ?: assignedEvents.firstOrNull()
+
+    // Generate the strictly personal message
+    val personalMessage = remember(crew, assignedEvents, selectedMode, selectedEvent, showCustomerPhone) {
+        if (assignedEvents.isEmpty()) {
+            "નમસ્તે ${crew.name}, મારુતિ સ્ટુડિયોમાંથી સંપર્ક કરું છું. હાલમાં કોઈ નવી ઇવેન્ટ ફાળવેલ નથી."
+        } else if (selectedMode == "all") {
+            viewModel.getPersonalScheduleForCrew(crew, assignedEvents, showCustomerPhone)
+        } else if (selectedEvent != null) {
+            viewModel.getPersonalPassForCrew(crew, selectedEvent, showCustomerPhone)
+        } else {
+            viewModel.getPersonalScheduleForCrew(crew, assignedEvents, showCustomerPhone)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(StudioGreenLight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Chat,
+                            contentDescription = null,
+                            tint = StudioGreenDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "ક્રૂ પર્સનલ ડ્યુટી (WhatsApp)",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioDarkText
+                        )
+                        Text(
+                            text = "${crew.name} • ${crew.role}",
+                            fontSize = 12.sp,
+                            color = StudioSecondaryGray
+                        )
+                    }
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close")
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (assignedEvents.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(StudioSurfaceVariant)
+                            .padding(14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "હાલમાં આ ક્રૂ માટે કોઈ ઇવેન્ટ ફાળવેલ નથી",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = StudioDarkText
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "તમે પાર્ટીની ઇવેન્ટ બુકિંગમાં જઈને આ ક્રૂ મેમ્બરને સિલેક્ટ કરશો એટલે તેનું શિડ્યુલ આપોઆપ અહીં આવી જશે.",
+                                fontSize = 11.sp,
+                                color = StudioSecondaryGray,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    // Privacy Toggle: Show or Hide Customer Phone
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (showCustomerPhone) StudioGreenLight else Color(0xFFFFF3E0)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (showCustomerPhone) StudioGreenDark.copy(alpha = 0.5f) else Color(0xFFFFB74D)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (showCustomerPhone) Icons.Default.Phone else Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = if (showCustomerPhone) StudioGreenDark else Color(0xFFE65100),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = if (showCustomerPhone) "ગ્રાહકનો નંબર બતાવો (Show)" else "ગ્રાહકનો નંબર છુપાવો (Protect)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (showCustomerPhone) StudioGreenDark else Color(0xFFBF360C)
+                                    )
+                                    Text(
+                                        text = if (showCustomerPhone) "મેસેજમાં પાર્ટીનો મોબાઈલ નંબર જશે" else "મેસેજમાં પાર્ટીનો નંબર છુપાવેલ રહેશે",
+                                        fontSize = 10.sp,
+                                        color = StudioSecondaryGray
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = showCustomerPhone,
+                                onCheckedChange = { showCustomerPhone = it },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = StudioGreenDark,
+                                    checkedTrackColor = StudioGreenLight,
+                                    uncheckedThumbColor = Color(0xFFE65100),
+                                    uncheckedTrackColor = Color(0xFFFFE0B2)
+                                )
+                            )
+                        }
+                    }
+
+                    // Selection: All Events or Specific Event
+                    if (assignedEvents.size > 1) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioSurfaceVariant)
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "કયો મેસેજ મોકલવો છે?",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StudioDarkText
+                            )
+
+                            // Option 1: All duties
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { selectedMode = "all" }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedMode == "all",
+                                    onClick = { selectedMode = "all" },
+                                    colors = RadioButtonDefaults.colors(selectedColor = StudioGreenDark)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "આગામી તમામ ડ્યુટી (${assignedEvents.size} ઇવેન્ટ્સ)",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selectedMode == "all") FontWeight.Bold else FontWeight.Normal,
+                                    color = StudioDarkText
+                                )
+                            }
+
+                            // Option 2: Single event
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { selectedMode = "single" }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedMode == "single",
+                                    onClick = { selectedMode = "single" },
+                                    colors = RadioButtonDefaults.colors(selectedColor = StudioGreenDark)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "કોઈ એક ચોક્કસ પ્રસંગ (Single Event)",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selectedMode == "single") FontWeight.Bold else FontWeight.Normal,
+                                    color = StudioDarkText
+                                )
+                            }
+
+                            if (selectedMode == "single") {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 28.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    assignedEvents.forEach { ev ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(if (selectedEventId == ev.id) StudioGreenLight else Color.Transparent)
+                                                .clickable { selectedEventId = ev.id }
+                                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = selectedEventId == ev.id,
+                                                onClick = { selectedEventId = ev.id },
+                                                colors = RadioButtonDefaults.colors(selectedColor = StudioGreenDark)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Column {
+                                                Text(
+                                                    text = "${ev.customerName} - ${ev.eventName}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = StudioDarkText
+                                                )
+                                                Text(
+                                                    text = "${ev.eventDate} • ${ev.eventTime}",
+                                                    fontSize = 10.sp,
+                                                    color = StudioSecondaryGray
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Security & Privacy guarantee label
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = StudioGreenDark,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "આ મેસેજમાં માત્ર આ જ ક્રૂની પર્સનલ વિગત છે (બીજા ક્રૂની વિગત નહીં આવે)",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = StudioGreenDark
+                        )
+                    }
+
+                    // Live Preview Box
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF212529))
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = personalMessage,
+                            fontSize = 11.sp,
+                            color = Color(0xFFF8F9FA),
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+
+                // Action: Send via WhatsApp
+                Button(
+                    onClick = {
+                        viewModel.openWhatsApp(crew.mobile, personalMessage)
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .testTag("send_crew_personal_whatsapp_btn"),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = StudioGreenSuccess)
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "WhatsApp પર પર્સનલ ડ્યુટી મોકલો",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Secondary Action: Copy text
+                OutlinedButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("Crew Duty", personalMessage)
+                        clipboard.setPrimaryClip(clip)
+                        Toast.makeText(context, "મેસેજ કોપી થઈ ગયો! (Copied)", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("મેસેજ કોપી કરો (Copy)", fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {}
+    )
 }
 
 @Composable
@@ -611,7 +1010,8 @@ fun AddCrewScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     var selectedRole by remember { mutableStateOf("Traditional Photographer") }
@@ -624,6 +1024,61 @@ fun AddCrewScreen(
     var mobileError by remember { mutableStateOf<String?>(null) }
     var customRoleError by remember { mutableStateOf<String?>(null) }
     var showDuplicateMobileWarning by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                try {
+                    val projection = arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    )
+                    context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                            val phoneIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+                            if (nameIdx >= 0) {
+                                val contactName = cursor.getString(nameIdx) ?: ""
+                                if (contactName.isNotBlank()) {
+                                    name = contactName
+                                    if (nameError != null) nameError = null
+                                }
+                            }
+
+                            if (phoneIdx >= 0) {
+                                var rawPhone = cursor.getString(phoneIdx) ?: ""
+                                rawPhone = rawPhone.replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
+                                if (rawPhone.startsWith("+91")) {
+                                    rawPhone = rawPhone.substring(3)
+                                } else if (rawPhone.startsWith("0") && rawPhone.length == 11) {
+                                    rawPhone = rawPhone.substring(1)
+                                }
+                                mobile = rawPhone
+                                if (mobileError != null) mobileError = null
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val openContactPicker = {
+        try {
+            val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI).apply {
+                type = ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE
+            }
+            contactPickerLauncher.launch(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     BackHandler {
         viewModel.navigateBack()
@@ -654,6 +1109,26 @@ fun AddCrewScreen(
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    androidx.compose.material3.TextButton(
+                        onClick = { openContactPicker() },
+                        modifier = Modifier.testTag("crew_pick_contact_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Contacts,
+                            contentDescription = "Contacts",
+                            tint = StudioRedPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Contacts",
+                            color = StudioRedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -698,19 +1173,45 @@ fun AddCrewScreen(
                     // Mobile Number *
                     Text(text = strings.mobileNumberLabel, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(6.dp))
-                    StudioInputField(
-                        value = mobile,
-                        onValueChange = {
-                            mobile = it.filter { c -> c.isDigit() || c == '+' }
-                            if (mobileError != null) mobileError = null
-                        },
-                        placeholder = strings.mobileNumberHint,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        isError = mobileError != null,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        testTag = "add_crew_mobile_input"
-                    )
+                    // Horizontal Layout: Mobile Number EditText (weight=1) + Contact Icon Button (btnSelectContact)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StudioInputField(
+                            value = mobile,
+                            onValueChange = {
+                                mobile = it.filter { c -> c.isDigit() || c == '+' }
+                                if (mobileError != null) mobileError = null
+                            },
+                            placeholder = strings.mobileNumberHint,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            isError = mobileError != null,
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            testTag = "editTextCustomerPhone"
+                        )
+
+                        // Contact Icon Button: 48dp x 48dp
+                        IconButton(
+                            onClick = { openContactPicker() },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(StudioRedLight)
+                                .testTag("btnSelectContact")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Contacts,
+                                contentDescription = "Select Contact",
+                                tint = StudioRedPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                     if (mobileError != null) {
                         Text(mobileError!!, color = StudioRedPrimary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                     }
@@ -904,7 +1405,8 @@ fun EditCrewScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val allCrew by viewModel.allCrew.collectAsState()
     val crew = allCrew.find { it.id == crewId }
 

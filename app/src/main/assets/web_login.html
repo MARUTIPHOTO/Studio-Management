@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Studio Management - Login</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: #F8F9FA;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: #FFFFFF;
+      border-radius: 18px;
+      padding: 32px 28px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+      border: 1px solid #EBECEF;
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo-badge {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 28px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(211, 47, 47, 0.3);
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1E293B;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #64748B;
+    }
+
+    /* 1. Google Button */
+    .google-btn {
+      width: 100%;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #FFFFFF;
+      color: #3C4043;
+      border: 1px solid #DADCE0;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .google-btn:hover {
+      background: #F8FAFD;
+      border-color: #D2E3FC;
+      box-shadow: 0 2px 6px rgba(60, 64, 67, 0.15);
+    }
+
+    .google-btn:active {
+      transform: scale(0.99);
+    }
+
+    .google-btn:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 22px 0;
+      color: #94A3B8;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #E2E8F0;
+    }
+
+    .divider span {
+      padding: 0 12px;
+    }
+
+    /* 2. Manual Login Form */
+    .input-field {
+      margin-bottom: 14px;
+    }
+
+    .input-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1E293B;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-wrapper input:focus {
+      border-color: #D32F2F;
+    }
+
+    .toggle-pass-btn {
+      position: absolute;
+      right: 10px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #64748B;
+    }
+
+    .forgot-link {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+
+    .forgot-link a {
+      font-size: 12px;
+      color: #D32F2F;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .forgot-link a:hover {
+      text-decoration: underline;
+    }
+
+    /* 3. Primary Submit Button */
+    .login-btn {
+      width: 100%;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(211, 47, 47, 0.28);
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
+      box-shadow: 0 6px 16px rgba(211, 47, 47, 0.38);
+      transform: translateY(-1px);
+    }
+
+    .login-btn:active {
+      transform: translateY(1px);
+    }
+
+    .login-btn:disabled {
+      background: #CBD5E1 !important;
+      color: #94A3B8 !important;
+      box-shadow: none !important;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-error {
+      background: #FEE2E2;
+      border: 1px solid #FCA5A5;
+      color: #B91C1C;
+    }
+
+    .alert-success {
+      background: #DCFCE7;
+      border: 1px solid #86EFAC;
+      color: #15803D;
+    }
+
+    /* Footer & Toggle */
+    .switch-auth {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin-top: 18px;
+      font-size: 13px;
+      color: #64748B;
+    }
+
+    .switch-auth button {
+      background: none;
+      border: none;
+      color: #D32F2F;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .security-note {
+      text-align: center;
+      font-size: 11.5px;
+      color: #94A3B8;
+      margin-top: 22px;
+      line-height: 16px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-card">
+    <!-- Header -->
+    <div class="brand-header">
+      <div class="logo-badge">📷</div>
+      <h1 class="title">Studio Management</h1>
+      <p id="subTitle" class="subtitle">તમારા સ્ટુડિયો એકાઉન્ટમાં લૉગિન કરો</p>
+    </div>
+
+    <!-- 1. Google Button -->
+    <button type="button" id="googleBtn" class="google-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+      </svg>
+      <span id="googleBtnText">Google દ્વારા સાઇન ઇન કરો</span>
+    </button>
+
+    <!-- Divider -->
+    <div class="divider">
+      <span>અથવા ઈમેલ વડે</span>
+    </div>
+
+    <!-- Error & Success Messages -->
+    <div id="errorAlert" class="alert alert-error"></div>
+    <div id="successAlert" class="alert alert-success"></div>
+
+    <!-- 2. Manual Form -->
+    <form id="authForm">
+      <div class="input-field">
+        <label for="emailInput">ઈમેલ સરનામું (Email)</label>
+        <div class="input-wrapper">
+          <input type="email" id="emailInput" placeholder="studio@example.com" required />
+        </div>
+      </div>
+
+      <div class="input-field">
+        <label for="passwordInput">પાસવર્ડ (Password)</label>
+        <div class="input-wrapper">
+          <input type="password" id="passwordInput" placeholder="ઓછામાં ઓછા 6 અક્ષરો" required />
+          <button type="button" id="togglePassBtn" class="toggle-pass-btn">👁️</button>
+        </div>
+      </div>
+
+      <!-- Confirm Password (Sign-up only) -->
+      <div id="confirmPassField" class="input-field" style="display: none;">
+        <label for="confirmPasswordInput">પાસવર્ડ કન્ફર્મ કરો</label>
+        <div class="input-wrapper">
+          <input type="password" id="confirmPasswordInput" placeholder="પાસવર્ડ ફરી દાખલ કરો" />
+        </div>
+      </div>
+
+      <!-- Forgot Password -->
+      <div id="forgotLinkWrapper" class="forgot-link">
+        <a id="forgotPassBtn">પાસવર્ડ ભૂલી ગયા છો?</a>
+      </div>
+
+      <!-- 3. Primary Button -->
+      <button type="submit" id="submitBtn" class="login-btn">
+        <span id="submitBtnText">Login to Studio</span>
+      </button>
+    </form>
+
+    <!-- 4. Toggle Mode -->
+    <div class="switch-auth">
+      <span id="switchText">નવા છો? એકાઉન્ટ નથી?</span>
+      <button type="button" id="switchBtn">નવું એકાઉન્ટ બનાવો</button>
+    </div>
+
+    <!-- Footer Security Note -->
+    <p class="security-note">
+      🔒 સુરક્ષિત લોગિન: તમારા Google એકાઉન્ટ અથવા ઈમેલ વડે સુરક્ષિત રીતે સાઇન ઇન કરો
+    </p>
+  </div>
+
+  <script type="module">
+    // Firebase v10 Modular Imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword,
+      sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // 1. Firebase Config (studio-management-f2469)
+    const firebaseConfig = {
+      apiKey: "AIzaSyC-RkrXducJCYvdN_8XCwjLL7JCzPB6Zg8",
+      authDomain: "studio-management-f2469.firebaseapp.com",
+      projectId: "studio-management-f2469",
+      storageBucket: "studio-management-f2469.firebasestorage.app",
+      messagingSenderId: "409146622754",
+      appId: "1:409146622754:android:ef281d37d9a93d95f4db7b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const googleProvider = new GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+
+    // UI Elements
+    let isSignUp = false;
+    const authForm = document.getElementById("authForm");
+    const googleBtn = document.getElementById("googleBtn");
+    const googleBtnText = document.getElementById("googleBtnText");
+    const submitBtn = document.getElementById("submitBtn");
+    const submitBtnText = document.getElementById("submitBtnText");
+    const emailInput = document.getElementById("emailInput");
+    const passwordInput = document.getElementById("passwordInput");
+    const confirmPasswordInput = document.getElementById("confirmPasswordInput");
+    const confirmPassField = document.getElementById("confirmPassField");
+    const forgotLinkWrapper = document.getElementById("forgotLinkWrapper");
+    const forgotPassBtn = document.getElementById("forgotPassBtn");
+    const switchBtn = document.getElementById("switchBtn");
+    const switchText = document.getElementById("switchText");
+    const subTitle = document.getElementById("subTitle");
+    const togglePassBtn = document.getElementById("togglePassBtn");
+    const errorAlert = document.getElementById("errorAlert");
+    const successAlert = document.getElementById("successAlert");
+
+    function showError(msg) {
+      successAlert.style.display = "none";
+      errorAlert.innerText = `⚠️ ${msg}`;
+      errorAlert.style.display = "flex";
+    }
+
+    function showSuccess(msg) {
+      errorAlert.style.display = "none";
+      successAlert.innerText = `✅ ${msg}`;
+      successAlert.style.display = "flex";
+    }
+
+    function clearAlerts() {
+      errorAlert.style.display = "none";
+      successAlert.style.display = "none";
+    }
+
+    // Toggle Password Visibility
+    togglePassBtn.onclick = () => {
+      const isPass = passwordInput.type === "password";
+      passwordInput.type = isPass ? "text" : "password";
+      togglePassBtn.innerText = isPass ? "🙈" : "👁️";
+    };
+
+    // Toggle Login / Sign Up Mode
+    switchBtn.onclick = () => {
+      isSignUp = !isSignUp;
+      clearAlerts();
+      if (isSignUp) {
+        subTitle.innerText = "નવું સ્ટુડિયો એકાઉન્ટ બનાવો";
+        confirmPassField.style.display = "block";
+        confirmPasswordInput.required = true;
+        forgotLinkWrapper.style.display = "none";
+        submitBtnText.innerText = "એકાઉન્ટ બનાવો (Register)";
+        switchText.innerText = "પહેલેથી જ એકાઉન્ટ છે?";
+        switchBtn.innerText = "લૉગિન કરો";
+      } else {
+        subTitle.innerText = "તમારા સ્ટુડિયો એકાઉન્ટમાં લૉગિન કરો";
+        confirmPassField.style.display = "none";
+        confirmPasswordInput.required = false;
+        forgotLinkWrapper.style.display = "flex";
+        submitBtnText.innerText = "Login to Studio";
+        switchText.innerText = "નવા છો? એકાઉન્ટ નથી?";
+        switchBtn.innerText = "નવું એકાઉન્ટ બનાવો";
+      }
+    };
+
+    // 1. Google Login Action
+    googleBtn.onclick = async () => {
+      clearAlerts();
+      googleBtn.disabled = true;
+      googleBtnText.innerText = "કનેક્ટ થઈ રહ્યું છે...";
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        showSuccess(`સ્વાગત છે, ${user.displayName || user.email}!`);
+      } catch (err) {
+        console.error("Google Auth Error:", err);
+        if (err.code === "auth/popup-closed-by-user") {
+          showError("લૉગિન વિન્ડો બંધ થઈ ગઈ. કૃપા કરીને ફરી પ્રયાસ કરો.");
+        } else {
+          showError(err.message);
+        }
+      } finally {
+        googleBtn.disabled = false;
+        googleBtnText.innerText = "Google દ્વારા સાઇન ઇન કરો";
+      }
+    };
+
+    // 2. Manual Form Submit (Email/Password Login & Register)
+    authForm.onsubmit = async (e) => {
+      e.preventDefault();
+      clearAlerts();
+
+      const email = emailInput.value.trim();
+      const pass = passwordInput.value.trim();
+
+      if (pass.length < 6) {
+        showError("પાસવર્ડ ઓછામાં ઓછો 6 અક્ષરોનો હોવો જોઈએ.");
+        return;
+      }
+
+      if (isSignUp && pass !== confirmPasswordInput.value.trim()) {
+        showError("બંને પાસવર્ડ મેળ ખાતા નથી!");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<div class="spinner"></div> <span>પ્રક્રિયા ચાલુ છે...</span>`;
+
+      try {
+        if (isSignUp) {
+          await createUserWithEmailAndPassword(auth, email, pass);
+          showSuccess("એકાઉન્ટ સફળતાપૂર્વક બની ગયું! લૉગિન પૂર્ણ થયું.");
+        } else {
+          await signInWithEmailAndPassword(auth, email, pass);
+          showSuccess("સફળતાપૂર્વક લૉગિન થઈ ગયું!");
+        }
+      } catch (err) {
+        console.error("Email Auth Error:", err);
+        if (err.code === "auth/invalid-credential" || err.code === "auth/wrong-password") {
+          showError("ખોટો ઈમેલ અથવા પાસવર્ડ.");
+        } else if (err.code === "auth/email-already-in-use") {
+          showError("આ ઈમેલ પર પહેલેથી એકાઉન્ટ છે. કૃપા કરીને લૉગિન કરો.");
+        } else if (err.code === "auth/user-not-found") {
+          showError("આ ઈમેલ પર કોઈ એકાઉન્ટ નથી મળ્યું.");
+        } else {
+          showError(err.message);
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span id="submitBtnText">${isSignUp ? "એકાઉન્ટ બનાવો (Register)" : "Login to Studio"}</span>`;
+      }
+    };
+
+    // 3. Forgot Password Action
+    forgotPassBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      if (!email) {
+        showError("પાસવર્ડ રીસેટ કરવા માટે પહેલા ઈમેલ બોક્સમાં તમારો ઈમેલ લખો.");
+        return;
+      }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showSuccess("પાસવર્ડ રીસેટ કરવાની લિંક તમારા ઈમેલ પર મોકલી દેવામાં આવી છે!");
+      } catch (err) {
+        showError(err.message);
+      }
+    };
+  </script>
+</body>
+</html>

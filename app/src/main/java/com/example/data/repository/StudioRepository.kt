@@ -10,7 +10,9 @@ import com.example.data.model.StudioProfile
 import com.example.ui.strings.AppLanguage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -24,6 +26,7 @@ class StudioRepository(private val context: Context) {
     private val crewDao = db.crewDao()
     private val prefs: SharedPreferences =
         context.getSharedPreferences("maruti_studio_prefs", Context.MODE_PRIVATE)
+    private val firestoreSync = com.example.data.firestore.FirestoreSyncManager(context.applicationContext)
 
     // Flow getters
     val customers: Flow<List<Customer>> = customerDao.getAllCustomers()
@@ -56,32 +59,55 @@ class StudioRepository(private val context: Context) {
         eventDao.getEventsOnDate(eventDate.trim())
     }
 
+    suspend fun syncFromCloud(): Result<Int> = withContext(Dispatchers.IO) {
+        firestoreSync.syncAllFromCloud()
+    }
+
+    suspend fun clearAllLocalData() = withContext(Dispatchers.IO) {
+        customerDao.deleteAll()
+        eventDao.deleteAll()
+        crewDao.deleteAll()
+    }
+
     suspend fun insertCustomer(customer: Customer): Long = withContext(Dispatchers.IO) {
-        customerDao.insertCustomer(customer.copy(mobile = normalizePhone(customer.mobile)))
+        val clean = customer.copy(mobile = normalizePhone(customer.mobile))
+        val id = customerDao.insertCustomer(clean)
+        val created = if (clean.id == 0L) clean.copy(id = id) else clean
+        firestoreSync.saveCustomerToCloud(created)
+        id
     }
 
     suspend fun updateCustomer(customer: Customer) = withContext(Dispatchers.IO) {
         val clean = customer.copy(mobile = normalizePhone(customer.mobile))
         customerDao.updateCustomer(clean)
         eventDao.updateCustomerInfoForEvents(clean.id, clean.name, clean.mobile)
+        firestoreSync.saveCustomerToCloud(clean)
     }
 
     suspend fun deleteCustomer(customer: Customer) = withContext(Dispatchers.IO) {
         // Also remove events for this customer
         eventDao.deleteEventsForCustomer(customer.id)
         customerDao.deleteCustomer(customer)
+        firestoreSync.deleteCustomerFromCloud(customer.id)
     }
 
     suspend fun insertEvent(event: EventBooking): Long = withContext(Dispatchers.IO) {
-        eventDao.insertEvent(event.copy(customerMobile = normalizePhone(event.customerMobile)))
+        val clean = event.copy(customerMobile = normalizePhone(event.customerMobile))
+        val id = eventDao.insertEvent(clean)
+        val created = if (clean.id == 0L) clean.copy(id = id) else clean
+        firestoreSync.saveEventToCloud(created)
+        id
     }
 
     suspend fun updateEvent(event: EventBooking) = withContext(Dispatchers.IO) {
-        eventDao.updateEvent(event.copy(customerMobile = normalizePhone(event.customerMobile)))
+        val clean = event.copy(customerMobile = normalizePhone(event.customerMobile))
+        eventDao.updateEvent(clean)
+        firestoreSync.saveEventToCloud(clean)
     }
 
     suspend fun deleteEvent(event: EventBooking) = withContext(Dispatchers.IO) {
         eventDao.deleteEvent(event)
+        firestoreSync.deleteEventFromCloud(event.id)
     }
 
     suspend fun findDuplicateEvents(
@@ -104,11 +130,17 @@ class StudioRepository(private val context: Context) {
     }
 
     suspend fun insertCrew(crew: CrewMember): Long = withContext(Dispatchers.IO) {
-        crewDao.insertCrew(crew.copy(mobile = normalizePhone(crew.mobile)))
+        val clean = crew.copy(mobile = normalizePhone(crew.mobile))
+        val id = crewDao.insertCrew(clean)
+        val created = if (clean.id == 0L) clean.copy(id = id) else clean
+        firestoreSync.saveCrewToCloud(created)
+        id
     }
 
     suspend fun updateCrew(crew: CrewMember) = withContext(Dispatchers.IO) {
-        crewDao.updateCrew(crew.copy(mobile = normalizePhone(crew.mobile)))
+        val clean = crew.copy(mobile = normalizePhone(crew.mobile))
+        crewDao.updateCrew(clean)
+        firestoreSync.saveCrewToCloud(clean)
     }
 
     suspend fun deleteCrew(crew: CrewMember) = withContext(Dispatchers.IO) {
@@ -131,7 +163,9 @@ class StudioRepository(private val context: Context) {
             e.printStackTrace()
         }
         crewDao.deleteCrew(crew)
+        firestoreSync.deleteCrewFromCloud(crew.id)
     }
+
 
     suspend fun findCrewByMobile(mobile: String): CrewMember? = withContext(Dispatchers.IO) {
         val clean = normalizePhone(mobile)
@@ -171,8 +205,12 @@ class StudioRepository(private val context: Context) {
             .putString("whatsapp_number", profile.whatsAppNumber)
             .putString("address", profile.address)
             .putString("logo_uri", profile.logoUri)
-            .apply()
+            .commit()
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            firestoreSync.saveProfileToCloud(profile)
+        }
     }
+
 
     // Language
     fun getLanguage(): AppLanguage {
@@ -181,7 +219,16 @@ class StudioRepository(private val context: Context) {
     }
 
     fun saveLanguage(language: AppLanguage) {
-        prefs.edit().putString("app_language", language.code).apply()
+        prefs.edit().putString("app_language", language.code).commit()
+    }
+
+    // Google AdMob Settings
+    fun isAdMobBannerEnabled(): Boolean {
+        return prefs.getBoolean("admob_banner_enabled", true)
+    }
+
+    fun setAdMobBannerEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("admob_banner_enabled", enabled).apply()
     }
 
     // Backup & Restore
@@ -484,5 +531,13 @@ class StudioRepository(private val context: Context) {
         )
 
         prefs.edit().putBoolean("has_sample_initialized", true).apply()
+    }
+
+    fun isShowCustomerPhoneInWhatsApp(): Boolean {
+        return prefs.getBoolean("show_customer_phone_in_whatsapp", true)
+    }
+
+    fun setShowCustomerPhoneInWhatsApp(show: Boolean) {
+        prefs.edit().putBoolean("show_customer_phone_in_whatsapp", show).apply()
     }
 }

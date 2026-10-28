@@ -52,5 +52,32 @@ class ExampleUnitTest {
     assertTrue(sheet.contains("Wedding"))
     assertTrue(sheet.contains("Charvik"))
     assertTrue(sheet.contains("Ahmedabad"))
+    assertTrue(sheet.contains("9876543210"))
+
+    // Test with customer phone masked
+    val maskedSheet = com.example.util.CallSheetHelper.generateEventCallSheet(
+      profile = profile,
+      mainEvent = event,
+      allCustomerEvents = listOf(event),
+      allCrew = listOf(crew),
+      includeCustomerPhone = false
+    )
+    assertTrue(maskedSheet.contains("[સુરક્ષા માટે છુપાવેલ / Protected]"))
+    assertFalse(maskedSheet.contains("9876543210"))
+  }
+
+  @Test
+  fun testAppStringsLocalization() {
+    val gujarati = com.example.ui.strings.AppStrings.get(com.example.ui.strings.AppLanguage.GUJARATI)
+    val hindi = com.example.ui.strings.AppStrings.get(com.example.ui.strings.AppLanguage.HINDI)
+    val english = com.example.ui.strings.AppStrings.get(com.example.ui.strings.AppLanguage.ENGLISH)
+
+    assertEquals("Google AdMob જાહેરાત સેટિંગ", gujarati.admobSettingsHeader)
+    assertEquals("Google AdMob विज्ञापन सेटिंग्स", hindi.admobSettingsHeader)
+    assertEquals("Google AdMob Ad Settings", english.admobSettingsHeader)
+
+    assertNotNull(gujarati.admobBannerToggleLabel)
+    assertNotNull(hindi.admobBannerToggleLabel)
+    assertNotNull(english.admobBannerToggleLabel)
   }
 }

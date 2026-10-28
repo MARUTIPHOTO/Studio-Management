@@ -88,6 +88,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import com.example.data.model.CrewMember
 import com.example.data.model.Customer
 import com.example.data.model.EventBooking
@@ -117,7 +119,8 @@ fun EventBookingScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val customers by viewModel.allCustomers.collectAsState()
     val allCrew by viewModel.allCrew.collectAsState()
 
@@ -388,7 +391,15 @@ fun EventBookingScreen(
 
                 // Quick Event Name Suggestions
                 Spacer(modifier = Modifier.height(8.dp))
-                val quickEventNames = listOf("Wedding (લગ્ન)", "Haldi (હલ્દી)", "Reception (રીસેપ્શન)", "Birthday (જન્મદિવસ)", "Sangeet (સંગીત)", "Ring Ceremony (સગાઈ)", "Pre-Wedding")
+                val quickEventNames = listOf(
+                    stringResource(R.string.event_wedding),
+                    stringResource(R.string.event_haldi),
+                    stringResource(R.string.event_reception),
+                    stringResource(R.string.event_birthday),
+                    stringResource(R.string.event_sangeet),
+                    stringResource(R.string.event_ring_ceremony),
+                    stringResource(R.string.event_pre_wedding)
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -396,18 +407,18 @@ fun EventBookingScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     quickEventNames.forEach { chipName ->
-                        val cleanName = chipName.split(" ").first()
+                        val isSelected = eventName.equals(chipName, ignoreCase = true)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (eventName.contains(cleanName)) StudioRedLight else StudioSurfaceVariant)
+                                .background(if (isSelected) StudioRedLight else StudioSurfaceVariant)
                                 .border(
                                     width = 1.dp,
-                                    color = if (eventName.contains(cleanName)) StudioRedPrimary else StudioLightBorder,
+                                    color = if (isSelected) StudioRedPrimary else StudioLightBorder,
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .clickable {
-                                    eventName = cleanName
+                                    eventName = chipName
                                     eventNameError = null
                                 }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -415,7 +426,7 @@ fun EventBookingScreen(
                             Text(
                                 text = chipName,
                                 fontSize = 12.sp,
-                                color = if (eventName.contains(cleanName)) StudioRedDark else StudioDarkText,
+                                color = if (isSelected) StudioRedDark else StudioDarkText,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -447,7 +458,7 @@ fun EventBookingScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = if (eventDate.isNotBlank()) eventDate else "તારીખ પસંદ કરો",
+                                    text = if (eventDate.isNotBlank()) eventDate else stringResource(R.string.select_date),
                                     fontSize = 14.sp,
                                     color = if (eventDate.isNotBlank()) StudioDarkText else StudioSecondaryGray,
                                     fontWeight = if (eventDate.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
@@ -483,7 +494,7 @@ fun EventBookingScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = if (eventTime.isNotBlank()) eventTime else "સમય પસંદ કરો",
+                                    text = if (eventTime.isNotBlank()) eventTime else stringResource(R.string.select_time),
                                     fontSize = 14.sp,
                                     color = if (eventTime.isNotBlank()) StudioDarkText else StudioSecondaryGray,
                                     fontWeight = if (eventTime.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal
@@ -854,14 +865,20 @@ fun EventBookingScreen(
         val callSheetText = viewModel.getCallSheetForEvent(recentlySavedEvent!!)
         val assignedCrewIds = recentlySavedEvent!!.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }
         val assignedCrewMembers = allCrew.filter { it.id in assignedCrewIds }
+        val showCustPhone by viewModel.showCustomerPhoneInWhatsApp.collectAsState()
 
         EventCallSheetModal(
             callSheetText = callSheetText,
             customerMobile = recentlySavedEvent!!.customerMobile,
             customerName = recentlySavedEvent!!.customerName,
             assignedCrew = assignedCrewMembers,
+            initialShowCustomerPhone = showCustPhone,
             onSendWhatsApp = { mobile, text ->
                 viewModel.openWhatsApp(mobile, text)
+            },
+            onSendCrewPersonal = { crew, showPhone ->
+                val personalPass = viewModel.getPersonalPassForCrew(crew, recentlySavedEvent!!, showPhone)
+                viewModel.openWhatsApp(crew.mobile, personalPass)
             },
             onShareGeneral = { text ->
                 viewModel.shareText(text)

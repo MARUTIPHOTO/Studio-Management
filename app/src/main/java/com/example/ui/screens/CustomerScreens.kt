@@ -1,6 +1,13 @@
 package com.example.ui.screens
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import android.provider.ContactsContract
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +35,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -93,7 +101,8 @@ fun AddCustomerScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     var name by remember { mutableStateOf("") }
     var mobile by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
@@ -101,6 +110,70 @@ fun AddCustomerScreen(
     var nameError by remember { mutableStateOf<String?>(null) }
     var mobileError by remember { mutableStateOf<String?>(null) }
     var savedCustomer by remember { mutableStateOf<Customer?>(null) }
+
+    val context = LocalContext.current
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                try {
+                    val projection = arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    )
+                    context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                            val phoneIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+                            val contactName = if (nameIdx >= 0) cursor.getString(nameIdx) else null
+                            var contactNumber = if (phoneIdx >= 0) cursor.getString(phoneIdx) else null
+
+                            // EditText ma data set karo:
+                            if (contactNumber != null) {
+                                // Number ma thi whitespace/spaces remove karva mate
+                                contactNumber = contactNumber.replace("\\s+".toRegex(), "")
+                                if (contactNumber.startsWith("+91")) {
+                                    contactNumber = contactNumber.substring(3)
+                                } else if (contactNumber.startsWith("0") && contactNumber.length == 11) {
+                                    contactNumber = contactNumber.substring(1)
+                                }
+                                mobile = contactNumber
+                                if (mobileError != null) mobileError = null
+                            }
+
+                            if (contactName != null) {
+                                name = contactName
+                                if (nameError != null) nameError = null
+                            }
+
+                            if (!contactName.isNullOrBlank() || !contactNumber.isNullOrBlank()) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "કોન્ટેક્ટ પસંદ થયો: $name ($mobile)",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val openContactPicker = {
+        try {
+            val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI).apply {
+                type = ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE
+            }
+            contactPickerLauncher.launch(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     BackHandler {
         viewModel.navigateBack()
@@ -125,6 +198,26 @@ fun AddCustomerScreen(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = StudioDarkText
+                        )
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { openContactPicker() },
+                        modifier = Modifier.testTag("pick_contact_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Contacts,
+                            contentDescription = "Contacts",
+                            tint = StudioRedPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Contacts",
+                            color = StudioRedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
                         )
                     }
                 },
@@ -159,6 +252,30 @@ fun AddCustomerScreen(
                 ) {
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = { openContactPicker() },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .testTag("pick_from_contacts_btn"),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = StudioRedPrimary)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Contacts,
+                                contentDescription = "Pick Contact",
+                                tint = StudioRedPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "ફોન કોન્ટેક્ટ્સમાંથી પસંદ કરો (Import Contact)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         // Customer Name Field
                         Text(
                             text = strings.customerNameLabel,
@@ -178,7 +295,7 @@ fun AddCustomerScreen(
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("customer_name_input")
+                                .testTag("editTextCustomerName")
                         )
                         if (nameError != null) {
                             Text(
@@ -199,22 +316,48 @@ fun AddCustomerScreen(
                             color = StudioDarkText
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        StudioInputField(
-                            value = mobile,
-                            onValueChange = {
-                                if (it.length <= 15) {
-                                    mobile = it.filter { char -> char.isDigit() || char == '+' }
-                                    if (mobileError != null) mobileError = null
-                                }
-                            },
-                            placeholder = strings.mobileNumberHint,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            isError = mobileError != null,
-                            singleLine = true,
+                        // Horizontal Layout: Mobile Number EditText (weight=1) + Contact Icon Button (btnSelectContact)
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testTag("customer_mobile_input")
-                        )
+                                .padding(bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StudioInputField(
+                                value = mobile,
+                                onValueChange = {
+                                    if (it.length <= 15) {
+                                        mobile = it.filter { char -> char.isDigit() || char == '+' }
+                                        if (mobileError != null) mobileError = null
+                                    }
+                                },
+                                placeholder = strings.mobileNumberHint,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                isError = mobileError != null,
+                                singleLine = true,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("editTextCustomerPhone")
+                            )
+
+                            // Contact Icon Button: 48dp x 48dp with circular background and ripple
+                            IconButton(
+                                onClick = { openContactPicker() },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(StudioRedLight)
+                                    .testTag("btnSelectContact")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Contacts,
+                                    contentDescription = "Select Contact",
+                                    tint = StudioRedPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                         if (mobileError != null) {
                             Text(
                                 text = mobileError!!,
@@ -405,7 +548,8 @@ fun EditCustomerScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val customers by viewModel.allCustomers.collectAsState()
     val customer = customers.find { it.id == customerId }
 
@@ -415,6 +559,70 @@ fun EditCustomerScreen(
 
     var nameError by remember { mutableStateOf<String?>(null) }
     var mobileError by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val contactPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                try {
+                    val projection = arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    )
+                    context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val nameIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                            val phoneIdx = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+                            val contactName = if (nameIdx >= 0) cursor.getString(nameIdx) else null
+                            var contactNumber = if (phoneIdx >= 0) cursor.getString(phoneIdx) else null
+
+                            // EditText ma data set karo:
+                            if (contactNumber != null) {
+                                // Number ma thi whitespace/spaces remove karva mate
+                                contactNumber = contactNumber.replace("\\s+".toRegex(), "")
+                                if (contactNumber.startsWith("+91")) {
+                                    contactNumber = contactNumber.substring(3)
+                                } else if (contactNumber.startsWith("0") && contactNumber.length == 11) {
+                                    contactNumber = contactNumber.substring(1)
+                                }
+                                mobile = contactNumber
+                                if (mobileError != null) mobileError = null
+                            }
+
+                            if (contactName != null) {
+                                name = contactName
+                                if (nameError != null) nameError = null
+                            }
+
+                            if (!contactName.isNullOrBlank() || !contactNumber.isNullOrBlank()) {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "કોન્ટેક્ટ પસંદ થયો: $name ($mobile)",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    val openContactPicker = {
+        try {
+            val intent = Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI).apply {
+                type = ContactsContract.CommonDataKinds.Phone.CONTENT_TYPE
+            }
+            contactPickerLauncher.launch(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     BackHandler {
         viewModel.navigateBack()
@@ -433,6 +641,26 @@ fun EditCustomerScreen(
                 navigationIcon = {
                     IconButton(onClick = { viewModel.navigateBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { openContactPicker() },
+                        modifier = Modifier.testTag("edit_pick_contact_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Contacts,
+                            contentDescription = "Contacts",
+                            tint = StudioRedPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Contacts",
+                            color = StudioRedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -469,7 +697,7 @@ fun EditCustomerScreen(
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("edit_customer_name_input")
+                            .testTag("editTextCustomerName")
                     )
                     if (nameError != null) {
                         Text(nameError!!, color = StudioRedPrimary, fontSize = 12.sp)
@@ -483,19 +711,45 @@ fun EditCustomerScreen(
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    StudioInputField(
-                        value = mobile,
-                        onValueChange = {
-                            mobile = it.filter { c -> c.isDigit() || c == '+' }
-                            if (mobileError != null) mobileError = null
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        isError = mobileError != null,
-                        singleLine = true,
+                    // Horizontal Layout: Mobile Number EditText (weight=1) + Contact Icon Button (btnSelectContact)
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("edit_customer_mobile_input")
-                    )
+                            .padding(bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StudioInputField(
+                            value = mobile,
+                            onValueChange = {
+                                mobile = it.filter { c -> c.isDigit() || c == '+' }
+                                if (mobileError != null) mobileError = null
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            isError = mobileError != null,
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("editTextCustomerPhone")
+                        )
+
+                        // Contact Icon Button: 48dp x 48dp
+                        IconButton(
+                            onClick = { openContactPicker() },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(StudioRedLight)
+                                .testTag("btnSelectContact")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Contacts,
+                                contentDescription = "Select Contact",
+                                tint = StudioRedPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                     if (mobileError != null) {
                         Text(mobileError!!, color = StudioRedPrimary, fontSize = 12.sp)
                     }
@@ -583,7 +837,8 @@ fun CustomerDetailsScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val customers by viewModel.allCustomers.collectAsState()
     val allEvents by viewModel.allEvents.collectAsState()
     val allCrew by viewModel.allCrew.collectAsState()
@@ -904,14 +1159,23 @@ fun CustomerDetailsScreen(
             ev.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }
         }.distinct()
         val assignedCrewMembers = allCrew.filter { it.id in allAssignedIds }
+        val showCustPhone by viewModel.showCustomerPhoneInWhatsApp.collectAsState()
 
         EventCallSheetModal(
             callSheetText = callSheetText,
             customerMobile = customer.mobile,
             customerName = customer.name,
             assignedCrew = assignedCrewMembers,
+            initialShowCustomerPhone = showCustPhone,
             onSendWhatsApp = { mobile, text ->
                 viewModel.openWhatsApp(mobile, text)
+            },
+            onSendCrewPersonal = { crew, showPhone ->
+                val crewEvents = customerEvents.filter { ev ->
+                    ev.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }.contains(crew.id)
+                }
+                val personalDuty = viewModel.getPersonalScheduleForCrew(crew, crewEvents, showPhone)
+                viewModel.openWhatsApp(crew.mobile, personalDuty)
             },
             onShareGeneral = { text ->
                 viewModel.shareText(text)

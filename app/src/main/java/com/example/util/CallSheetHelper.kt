@@ -15,7 +15,8 @@ object CallSheetHelper {
         profile: StudioProfile,
         mainEvent: EventBooking,
         allCustomerEvents: List<EventBooking>,
-        allCrew: List<CrewMember>
+        allCrew: List<CrewMember>,
+        includeCustomerPhone: Boolean = true
     ): String {
         val sb = StringBuilder()
 
@@ -35,7 +36,11 @@ object CallSheetHelper {
         val dateDisplay = if (mainDay.isNotBlank()) "${mainEvent.eventDate} ($mainDay)" else mainEvent.eventDate
         sb.appendLine("🎉 Main Event: ${mainEvent.eventName}")
         sb.appendLine("👤 Party / Customer: ${mainEvent.customerName}")
-        sb.appendLine("📞 Customer Phone: ${mainEvent.customerMobile}")
+        if (includeCustomerPhone) {
+            sb.appendLine("📞 Customer Phone: ${mainEvent.customerMobile}")
+        } else {
+            sb.appendLine("📞 Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]")
+        }
         sb.appendLine("📅 Main Date: $dateDisplay")
         sb.appendLine("⏰ Time: ${mainEvent.eventTime}")
         sb.appendLine("📍 Main Venue / Location: ${mainEvent.eventLocation}")
@@ -139,6 +144,150 @@ object CallSheetHelper {
         sb.appendLine("===============================")
         sb.appendLine("⚠️ Instructions: Please arrive 15 minutes prior to reporting time with fully charged batteries and formatted SD cards.")
         sb.appendLine("🙏 Thank you - ${profile.studioName.trim()} (Helpline: ${profile.mobileNumber.trim()})")
+
+        return sb.toString().trimEnd()
+    }
+
+    /**
+     * Generates a strictly PERSONAL duty pass for an individual crew member for a specific event.
+     * Contains only this crew member's assignment details without including other crew members.
+     */
+    fun generateSingleEventCrewPass(
+        profile: StudioProfile,
+        crew: CrewMember,
+        event: EventBooking,
+        includeCustomerPhone: Boolean = true
+    ): String {
+        val sb = StringBuilder()
+
+        // 1. Studio Header
+        val studioUpper = profile.studioName.trim().uppercase().ifBlank { "STUDIO" }
+        sb.appendLine("📸 $studioUpper - CREW DUTY PASS 📸")
+        sb.appendLine("===============================")
+        sb.appendLine("🏢 Studio: ${profile.studioName.trim().ifBlank { "Studio" }}")
+        sb.appendLine("👤 Studio Lead: ${profile.ownerName.trim()}")
+        sb.appendLine("📞 Helpline: ${profile.mobileNumber.trim()}")
+        sb.appendLine("===============================")
+        sb.appendLine()
+
+        // 2. Personal Crew Intro
+        val rEmoji = getRoleEmoji(crew.role)
+        sb.appendLine("👤 Crew Member: ${crew.name.trim()} ($rEmoji ${crew.role.trim()})")
+        sb.appendLine("📱 Mobile: ${crew.mobile.trim()}")
+        val gear = crew.cameraEquipment.trim().ifBlank { "Standard Kit" }
+        sb.appendLine("🎒 Assigned Gear: $gear")
+        sb.appendLine()
+
+        // 3. Specific Event Details
+        val dayOfWeek = getDayOfWeek(event.eventDateMillis, event.eventDate)
+        val dateDisplay = if (dayOfWeek.isNotBlank()) "${event.eventDate} ($dayOfWeek)" else event.eventDate
+        val themeEmoji = getEventThemeEmoji(event.eventName)
+        val reportTime = getReportingTime(event.eventTime)
+
+        sb.appendLine("📋 YOUR EVENT DUTY DETAILS:")
+        sb.appendLine("-------------------------------")
+        sb.appendLine("🎉 Function: $themeEmoji ${event.eventName}")
+        sb.appendLine("👤 Customer / Party: ${event.customerName}")
+        if (includeCustomerPhone) {
+            sb.appendLine("📞 Customer Phone: ${event.customerMobile}")
+        } else {
+            sb.appendLine("📞 Customer Phone: [સુરક્ષા માટે છુપાવેલ / Protected]")
+        }
+        sb.appendLine("📅 Date: $dateDisplay")
+        sb.appendLine("⏰ Event Time: ${event.eventTime}")
+        sb.appendLine("⏰ Reporting Time: $reportTime (પહોંચવાનો સમય)")
+        sb.appendLine("📍 Location / Venue: ${event.eventLocation}")
+
+        if (event.eventLocation.isNotBlank()) {
+            val encodedLoc = try {
+                URLEncoder.encode(event.eventLocation.trim(), "UTF-8")
+            } catch (e: Exception) {
+                event.eventLocation.trim()
+            }
+            sb.appendLine("🗺️ Google Maps: https://maps.google.com/?q=$encodedLoc")
+        }
+
+        if (event.dressCodeNote.isNotBlank()) {
+            sb.appendLine("📌 Instructions / Notes: ${event.dressCodeNote.trim()}")
+        }
+        sb.appendLine()
+
+        // 4. Instructions & Footer (strictly personal, no other crew info)
+        sb.appendLine("===============================")
+        sb.appendLine("⚠️ સૂચના: રિપોર્ટિંગ ટાઈમના ૧૫ મિનિટ પહેલાં સ્થળ પર પહોંચવું, બેટરી ફુલ ચાર્જ રાખવી અને SD કાર્ડ ફોર્મેટ રાખવા.")
+        sb.appendLine("🙏 Best Wishes - ${profile.studioName.trim()}")
+
+        return sb.toString().trimEnd()
+    }
+
+    /**
+     * Generates a strictly PERSONAL duty schedule for an individual crew member
+     * across all their upcoming assigned functions/events. No other crew members included.
+     */
+    fun generatePersonalCrewDutySchedule(
+        profile: StudioProfile,
+        crew: CrewMember,
+        assignedEvents: List<EventBooking>,
+        includeCustomerPhone: Boolean = true
+    ): String {
+        val sb = StringBuilder()
+
+        val studioUpper = profile.studioName.trim().uppercase().ifBlank { "STUDIO" }
+        sb.appendLine("📸 $studioUpper - CREW DUTY SCHEDULE 📸")
+        sb.appendLine("===============================")
+        sb.appendLine("🏢 Studio: ${profile.studioName.trim().ifBlank { "Studio" }}")
+        sb.appendLine("👤 Lead: ${profile.ownerName.trim()}")
+        sb.appendLine("📞 Helpline: ${profile.mobileNumber.trim()}")
+        sb.appendLine("===============================")
+        sb.appendLine()
+
+        val rEmoji = getRoleEmoji(crew.role)
+        sb.appendLine("👤 Crew Member: ${crew.name.trim()} ($rEmoji ${crew.role.trim()})")
+        sb.appendLine("📱 Mobile: ${crew.mobile.trim()}")
+        val gear = crew.cameraEquipment.trim().ifBlank { "Standard Kit" }
+        sb.appendLine("🎒 Gear: $gear")
+        val sortedEvents = assignedEvents.sortedBy { it.eventDateMillis }
+        sb.appendLine("🗓️ Total Assigned Duties: ${sortedEvents.size} Event${if (sortedEvents.size > 1) "s" else ""}")
+        sb.appendLine()
+
+        sb.appendLine("📋 YOUR UPCOMING ASSIGNED DUTIES:")
+        sb.appendLine("-------------------------------")
+
+        val numEmojis = listOf("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟")
+        sortedEvents.forEachIndexed { index, ev ->
+            val numEmoji = numEmojis.getOrElse(index) { "#${index + 1}" }
+            val dayOfWeek = getDayOfWeek(ev.eventDateMillis, ev.eventDate)
+            val dateDisplay = if (dayOfWeek.isNotBlank()) "${ev.eventDate} ($dayOfWeek)" else ev.eventDate
+            val themeEmoji = getEventThemeEmoji(ev.eventName)
+            val reportTime = getReportingTime(ev.eventTime)
+
+            sb.appendLine("$numEmoji $themeEmoji ${ev.eventName}")
+            sb.appendLine("   👤 Party / Customer: ${ev.customerName}")
+            if (includeCustomerPhone) {
+                sb.appendLine("   📞 Contact: ${ev.customerMobile}")
+            } else {
+                sb.appendLine("   📞 Contact: [સુરક્ષા માટે છુપાવેલ / Protected]")
+            }
+            sb.appendLine("   📅 Date: $dateDisplay")
+            sb.appendLine("   ⏰ Event Time: ${ev.eventTime} (Report: $reportTime)")
+            sb.appendLine("   📍 Venue: ${ev.eventLocation}")
+            if (ev.eventLocation.isNotBlank()) {
+                val enc = try {
+                    URLEncoder.encode(ev.eventLocation.trim(), "UTF-8")
+                } catch (e: Exception) {
+                    ev.eventLocation.trim()
+                }
+                sb.appendLine("   🗺️ Maps: https://maps.google.com/?q=$enc")
+            }
+            if (ev.dressCodeNote.isNotBlank()) {
+                sb.appendLine("   📌 Note: ${ev.dressCodeNote.trim()}")
+            }
+            sb.appendLine()
+        }
+
+        sb.appendLine("===============================")
+        sb.appendLine("⚠️ સૂચના: દરેક ઇવેન્ટમાં સમયસર પહોંચવું. કોઈપણ પ્રશ્ન હોય તો તાત્કાલિક સ્ટુડિયો પર સંપર્ક કરવો.")
+        sb.appendLine("🙏 Thank you - ${profile.studioName.trim()}")
 
         return sb.toString().trimEnd()
     }

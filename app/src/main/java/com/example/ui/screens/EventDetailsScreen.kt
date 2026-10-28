@@ -73,6 +73,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -102,7 +104,8 @@ fun EventDetailsScreen(
     viewModel: StudioViewModel,
     modifier: Modifier = Modifier
 ) {
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val allEvents by viewModel.allEvents.collectAsState()
     val allCrew by viewModel.allCrew.collectAsState()
     val event = allEvents.find { it.id == eventId }
@@ -467,14 +470,20 @@ fun EventDetailsScreen(
         val callSheetText = viewModel.getCallSheetForEvent(event)
         val assignedCrewIds = event.crewIdsCsv.split(",").mapNotNull { it.trim().toLongOrNull() }
         val assignedCrewMembers = allCrew.filter { it.id in assignedCrewIds }
+        val showCustPhone by viewModel.showCustomerPhoneInWhatsApp.collectAsState()
 
         EventCallSheetModal(
             callSheetText = callSheetText,
             customerMobile = event.customerMobile,
             customerName = event.customerName,
             assignedCrew = assignedCrewMembers,
+            initialShowCustomerPhone = showCustPhone,
             onSendWhatsApp = { mobile, text ->
                 viewModel.openWhatsApp(mobile, text)
+            },
+            onSendCrewPersonal = { crew, showPhone ->
+                val personalPass = viewModel.getPersonalPassForCrew(crew, event, showPhone)
+                viewModel.openWhatsApp(crew.mobile, personalPass)
             },
             onShareGeneral = { text ->
                 viewModel.shareText(text)
@@ -512,7 +521,8 @@ fun EditEventScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val strings = viewModel.strings
+    val currentLang by viewModel.language.collectAsState()
+    val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val allEvents by viewModel.allEvents.collectAsState()
     val allCrew by viewModel.allCrew.collectAsState()
     val event = allEvents.find { it.id == eventId }
@@ -650,6 +660,50 @@ fun EditEventScreen(
                     if (eventNameError != null) {
                         Text(eventNameError!!, color = StudioRedPrimary, fontSize = 12.sp)
                     }
+
+                    // Quick Event Name Suggestions (Localizable via stringResource)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val quickEventNames = listOf(
+                        stringResource(R.string.event_wedding),
+                        stringResource(R.string.event_haldi),
+                        stringResource(R.string.event_reception),
+                        stringResource(R.string.event_birthday),
+                        stringResource(R.string.event_sangeet),
+                        stringResource(R.string.event_ring_ceremony),
+                        stringResource(R.string.event_pre_wedding)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        quickEventNames.forEach { chipName ->
+                            val isSelected = eventName.equals(chipName, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) StudioRedLight else StudioSurfaceVariant)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) StudioRedPrimary else StudioLightBorder,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        eventName = chipName
+                                        eventNameError = null
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = chipName,
+                                    fontSize = 12.sp,
+                                    color = if (isSelected) StudioRedDark else StudioDarkText,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Date & Time
@@ -670,7 +724,12 @@ fun EditEventScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(eventDate, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = StudioDarkText)
+                                    Text(
+                                        text = if (eventDate.isNotBlank()) eventDate else stringResource(R.string.select_date),
+                                        fontSize = 14.sp,
+                                        fontWeight = if (eventDate.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (eventDate.isNotBlank()) StudioDarkText else StudioSecondaryGray
+                                    )
                                     Icon(
                                         imageVector = Icons.Default.CalendarMonth,
                                         contentDescription = null,
@@ -693,7 +752,12 @@ fun EditEventScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(eventTime, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = StudioDarkText)
+                                    Text(
+                                        text = if (eventTime.isNotBlank()) eventTime else stringResource(R.string.select_time),
+                                        fontSize = 14.sp,
+                                        fontWeight = if (eventTime.isNotBlank()) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (eventTime.isNotBlank()) StudioDarkText else StudioSecondaryGray
+                                    )
                                     Icon(
                                         imageVector = Icons.Default.AccessTime,
                                         contentDescription = null,

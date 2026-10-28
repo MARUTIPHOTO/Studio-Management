@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.studioName is string && data.studioName.size() >= 1 && data.studioName.size() <= 100 &&
+             data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 100 &&
+             data.mobileNumber is string && data.mobileNumber.size() >= 5 && data.mobileNumber.size() <= 30 &&
+             (!('whatsAppNumber' in data) || (data.whatsAppNumber is string && data.whatsAppNumber.size() <= 30)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 200)) &&
+             (!('logoUri' in data) || (data.logoUri is string && data.logoUri.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidCustomer(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.mobile is string && data.mobile.size() >= 5 && data.mobile.size() <= 30 &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidEvent(data) {
+      return data.userId == request.auth.uid &&
+             data.customerId is string && data.customerId.size() > 0 && data.customerId.size() <= 128 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+             data.customerMobile is string && data.customerMobile.size() >= 5 && data.customerMobile.size() <= 30 &&
+             data.eventName is string && data.eventName.size() >= 1 && data.eventName.size() <= 100 &&
+             data.eventDate is string && data.eventDate.size() >= 1 && data.eventDate.size() <= 50 &&
+             data.eventTime is string && data.eventTime.size() >= 1 && data.eventTime.size() <= 30 &&
+             data.eventLocation is string && data.eventLocation.size() >= 1 && data.eventLocation.size() <= 200 &&
+             data.status in ['Upcoming', 'Completed'] &&
+             (!('eventDateMillis' in data) || (data.eventDateMillis is int || data.eventDateMillis is number)) &&
+             (!('crewIdsCsv' in data) || (data.crewIdsCsv is string && data.crewIdsCsv.size() <= 500)) &&
+             (!('crewNames' in data) || (data.crewNames is string && data.crewNames.size() <= 1000)) &&
+             (!('dressCodeNote' in data) || (data.dressCodeNote is string && data.dressCodeNote.size() <= 500)) &&
+             (!('reminderEnabled' in data) || data.reminderEnabled is bool) &&
+             (!('reminderPreset' in data) || (data.reminderPreset is string && data.reminderPreset.size() <= 50)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidCrew(data) {
+      return data.userId == request.auth.uid &&
+             data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.mobile is string && data.mobile.size() >= 5 && data.mobile.size() <= 30 &&
+             data.role is string && data.role.size() >= 1 && data.role.size() <= 50 &&
+             (!('cameraEquipment' in data) || (data.cameraEquipment is string && data.cameraEquipment.size() <= 500)) &&
+             (!('note' in data) || (data.note is string && data.note.size() <= 1000)) &&
+             (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming());
+      allow delete: if isOwner(userId);
+
+      match /customers/{customerId} {
+        allow get: if isOwner(userId) && isValidId(customerId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(customerId) && isValidCustomer(incoming());
+        allow update: if isOwner(userId) && isValidId(customerId) && isValidCustomer(incoming());
+        allow delete: if isOwner(userId) && isValidId(customerId);
+      }
+
+      match /events/{eventId} {
+        allow get: if isOwner(userId) && isValidId(eventId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(eventId) && isValidEvent(incoming());
+        allow update: if isOwner(userId) && isValidId(eventId) && isValidEvent(incoming());
+        allow delete: if isOwner(userId) && isValidId(eventId);
+      }
+
+      match /crew/{crewId} {
+        allow get: if isOwner(userId) && isValidId(crewId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(crewId) && isValidCrew(incoming());
+        allow update: if isOwner(userId) && isValidId(crewId) && isValidCrew(incoming());
+        allow delete: if isOwner(userId) && isValidId(crewId);
+      }
+    }
+  }
+}
