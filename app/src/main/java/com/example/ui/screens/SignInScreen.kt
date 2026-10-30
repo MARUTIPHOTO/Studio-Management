@@ -144,7 +144,7 @@ fun SignInScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Maruti Photo Studio",
+                text = "Studio Management",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = StudioDarkText,
@@ -152,7 +152,7 @@ fun SignInScreen(
             )
 
             Text(
-                text = "મારુતિ ફોટો સ્ટુડિયો મેનેજમેન્ટ",
+                text = "સ્ટુડિયો મેનેજમેન્ટ",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = StudioRedPrimary,
