@@ -231,6 +231,40 @@ class StudioRepository(private val context: Context) {
         prefs.edit().putBoolean("admob_banner_enabled", enabled).apply()
     }
 
+    fun isAdMobTestMode(): Boolean {
+        return prefs.getBoolean("admob_test_mode", true)
+    }
+
+    fun setAdMobTestMode(enabled: Boolean) {
+        prefs.edit().putBoolean("admob_test_mode", enabled).apply()
+    }
+
+    fun getBannerAdUnitId(): String {
+        return prefs.getString("admob_banner_unit_id", com.example.util.AdMobConfig.DEFAULT_LIVE_BANNER_ID)
+            ?: com.example.util.AdMobConfig.DEFAULT_LIVE_BANNER_ID
+    }
+
+    fun setBannerAdUnitId(id: String) {
+        prefs.edit().putString("admob_banner_unit_id", id.trim()).apply()
+    }
+
+    fun getInterstitialAdUnitId(): String {
+        return prefs.getString("admob_interstitial_unit_id", com.example.util.AdMobConfig.DEFAULT_LIVE_INTERSTITIAL_ID)
+            ?: com.example.util.AdMobConfig.DEFAULT_LIVE_INTERSTITIAL_ID
+    }
+
+    fun setInterstitialAdUnitId(id: String) {
+        prefs.edit().putString("admob_interstitial_unit_id", id.trim()).apply()
+    }
+
+    fun isInterstitialAdEnabled(): Boolean {
+        return prefs.getBoolean("admob_interstitial_enabled", true)
+    }
+
+    fun setInterstitialAdEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("admob_interstitial_enabled", enabled).apply()
+    }
+
     // Backup & Restore
     suspend fun createBackupJson(): String = withContext(Dispatchers.IO) {
         val root = JSONObject()

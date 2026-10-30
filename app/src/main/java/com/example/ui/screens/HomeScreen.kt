@@ -95,6 +95,11 @@ fun HomeScreen(
     val allCrew by viewModel.allCrew.collectAsState()
     val searchQuery by viewModel.customerSearchQuery.collectAsState()
     val isAdMobBannerEnabled by viewModel.isAdMobBannerEnabled.collectAsState()
+    val isAdMobTestMode by viewModel.isAdMobTestMode.collectAsState()
+    val configuredBannerId by viewModel.bannerAdUnitId.collectAsState()
+    val effectiveBannerId = remember(isAdMobTestMode, configuredBannerId) {
+        viewModel.getEffectiveBannerAdUnitId()
+    }
     val currentUser by viewModel.currentUser.collectAsState()
     val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
 
@@ -132,7 +137,7 @@ fun HomeScreen(
                             .testTag("home_admob_banner_card")
                     ) {
                         AdMobBanner(
-                            adUnitId = "ca-app-pub-3940256099942544/6300978111",
+                            adUnitId = effectiveBannerId,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

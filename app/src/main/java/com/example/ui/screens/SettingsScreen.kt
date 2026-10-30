@@ -1,6 +1,9 @@
 package com.example.ui.screens
 
+import android.app.Activity
+import android.content.ContextWrapper
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +33,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Campaign
@@ -132,6 +136,10 @@ fun SettingsScreen(
     val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val profile by viewModel.studioProfile.collectAsState()
     val isAdMobBannerEnabled by viewModel.isAdMobBannerEnabled.collectAsState()
+    val isAdMobTestMode by viewModel.isAdMobTestMode.collectAsState()
+    val bannerAdUnitId by viewModel.bannerAdUnitId.collectAsState()
+    val interstitialAdUnitId by viewModel.interstitialAdUnitId.collectAsState()
+    val isInterstitialAdEnabled by viewModel.isInterstitialAdEnabled.collectAsState()
     val context = LocalContext.current
 
     var studioName by remember { mutableStateOf(profile.studioName) }
@@ -936,7 +944,74 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Banner Preview Toggle Row
+                        // Status Badge Row
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isAdMobTestMode) StudioGreenLight else Color(0xFFE8F0FE))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (isAdMobTestMode) "ટેસ્ટ મોડ સક્રિય (Test Mode Active)" else "લાઇવ મોડ સક્રિય (Live Play Store Mode)",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isAdMobTestMode) StudioGreenDark else Color(0xFF1967D2)
+                                )
+                                Text(
+                                    text = if (isAdMobTestMode) strings.admobTestModeActiveDesc else strings.admobLiveModeActiveDesc,
+                                    fontSize = 10.sp,
+                                    color = StudioDarkText,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+
+                        // Toggle 1: Test Mode vs Live Mode
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioSurfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = strings.admobTestModeToggleLabel,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StudioDarkText
+                                )
+                                Text(
+                                    text = if (isAdMobTestMode) "ચાલુ: Google Test Ads (ખાતું સુરક્ષિત)" else "બંધ: ઓરિજિનલ AdMob કી સક્રિય",
+                                    fontSize = 11.sp,
+                                    color = if (isAdMobTestMode) StudioGreenDark else StudioRedPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = isAdMobTestMode,
+                                onCheckedChange = { checked ->
+                                    viewModel.setAdMobTestMode(checked)
+                                    val msg = if (checked) "AdMob ટેસ્ટ મોડ ચાલુ કર્યો (Safe Test Mode)" else "AdMob લાઇવ મોડ ચાલુ કર્યો (Play Store Mode)"
+                                    viewModel.showUserMessage(msg)
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = StudioGreenDark,
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Color.LightGray
+                                ),
+                                modifier = Modifier.testTag("admob_test_mode_switch")
+                            )
+                        }
+
+                        // Toggle 2: Banner Ads
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -954,9 +1029,9 @@ fun SettingsScreen(
                                     color = StudioDarkText
                                 )
                                 Text(
-                                    text = strings.admobTestModeStatus,
+                                    text = if (isAdMobBannerEnabled) "બેનર જાહેરાત ચાલુ છે" else "બેનર જાહેરાત બંધ છે",
                                     fontSize = 11.sp,
-                                    color = StudioGreenDark
+                                    color = if (isAdMobBannerEnabled) StudioGreenDark else StudioSecondaryGray
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -964,7 +1039,7 @@ fun SettingsScreen(
                                 checked = isAdMobBannerEnabled,
                                 onCheckedChange = { checked ->
                                     viewModel.setAdMobBannerEnabled(checked)
-                                    val msg = if (checked) "AdMob બેનર પ્રીવ્યૂ ચાલુ કર્યું" else "AdMob બેનર પ્રીવ્યૂ બંધ કર્યું"
+                                    val msg = if (checked) "AdMob બેનર ચાલુ કર્યું" else "AdMob બેનર બંધ કર્યું"
                                     viewModel.showUserMessage(msg)
                                 },
                                 colors = SwitchDefaults.colors(
@@ -977,7 +1052,48 @@ fun SettingsScreen(
                             )
                         }
 
-                        // Ad IDs display
+                        // Toggle 3: Interstitial Ads
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(StudioSurfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "ઇન્ટર્સ્ટિશિયલ એડ્સ (Fullscreen Ads)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = StudioDarkText
+                                )
+                                Text(
+                                    text = if (isInterstitialAdEnabled) "ઇન્ટર્સ્ટિશિયલ એડ્સ સક્રિય છે" else "ઇન્ટર્સ્ટિશિયલ એડ્સ નિષ્ક્રિય છે",
+                                    fontSize = 11.sp,
+                                    color = if (isInterstitialAdEnabled) StudioGreenDark else StudioSecondaryGray
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = isInterstitialAdEnabled,
+                                onCheckedChange = { checked ->
+                                    viewModel.setInterstitialAdEnabled(checked)
+                                    val msg = if (checked) "ઇન્ટર્સ્ટિશિયલ એડ્સ ચાલુ કરી" else "ઇન્ટર્સ્ટિશિયલ એડ્સ બંધ કરી"
+                                    viewModel.showUserMessage(msg)
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = StudioRedPrimary,
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Color.LightGray
+                                ),
+                                modifier = Modifier.testTag("admob_interstitial_toggle_switch")
+                            )
+                        }
+
+                        // Ad Unit IDs Display Card
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -985,22 +1101,73 @@ fun SettingsScreen(
                                 .background(Color(0xFFFAFAFA))
                                 .border(0.5.dp, StudioLightBorder, RoundedCornerShape(8.dp))
                                 .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = strings.admobBannerAdUnitLabel,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StudioDarkText
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "ca-app-pub-3940256099942544/6300978111",
-                                    fontSize = 10.sp,
-                                    color = StudioSecondaryGray
-                                )
+                            // Banner ID
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = strings.admobBannerAdUnitLabel,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StudioDarkText
+                                    )
+                                    Text(
+                                        text = if (isAdMobTestMode) "ટેસ્ટ ID: ${com.example.util.AdMobConfig.TEST_BANNER_ID}" else "લાઇવ ID: $bannerAdUnitId",
+                                        fontSize = 10.sp,
+                                        color = if (isAdMobTestMode) StudioSecondaryGray else StudioRedPrimary
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("Banner Ad Unit ID", bannerAdUnitId)
+                                        clipboard?.setPrimaryClip(clip)
+                                        Toast.makeText(context, "બેનર ID કોપી થઈ ગયું!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Banner ID", modifier = Modifier.size(16.dp))
+                                }
                             }
+
+                            // Interstitial ID
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = strings.admobInterstitialAdUnitLabel,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = StudioDarkText
+                                    )
+                                    Text(
+                                        text = if (isAdMobTestMode) "ટેસ્ટ ID: ${com.example.util.AdMobConfig.TEST_INTERSTITIAL_ID}" else "લાઇવ ID: $interstitialAdUnitId",
+                                        fontSize = 10.sp,
+                                        color = if (isAdMobTestMode) StudioSecondaryGray else StudioRedPrimary
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("Interstitial Ad Unit ID", interstitialAdUnitId)
+                                        clipboard?.setPrimaryClip(clip)
+                                        Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ ID કોપી થઈ ગયું!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Interstitial ID", modifier = Modifier.size(16.dp))
+                                }
+                            }
+
+                            // App ID
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     text = strings.admobAppIdLabel,
@@ -1010,11 +1177,40 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "ca-app-pub-3940256099942544~3347511713",
+                                    text = "ca-app-pub-3231614216500760~...",
                                     fontSize = 10.sp,
                                     color = StudioSecondaryGray
                                 )
                             }
+                        }
+
+                        // Test Interstitial Ad Action Button
+                        OutlinedButton(
+                            onClick = {
+                                val act = context.findActivity()
+                                if (act != null) {
+                                    Toast.makeText(context, strings.admobInterstitialShownToast, Toast.LENGTH_SHORT).show()
+                                    viewModel.showInterstitialAd(act) {
+                                        Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ એડ પૂર્ણ થઈ!", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ એડ લોડ થઈ રહી છે...", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .testTag("test_interstitial_ad_button"),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Campaign, contentDescription = null, tint = StudioRedPrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = strings.admobShowInterstitialTestBtn,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StudioRedPrimary
+                            )
                         }
 
                         // Live AdMob Banner Preview
@@ -1029,8 +1225,12 @@ fun SettingsScreen(
                                 color = StudioDarkText
                             )
 
+                            val previewBannerId = remember(isAdMobTestMode, bannerAdUnitId) {
+                                viewModel.getEffectiveBannerAdUnitId()
+                            }
+
                             AdMobBanner(
-                                adUnitId = "ca-app-pub-3940256099942544/6300978111",
+                                adUnitId = previewBannerId,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(6.dp))
@@ -1125,4 +1325,13 @@ fun SettingsScreen(
             isDestructive = false
         )
     }
+}
+
+private fun android.content.Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }

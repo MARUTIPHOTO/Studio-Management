@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.data.model.StudioProfile
 import com.example.ui.strings.StringsDefinition
 import com.example.ui.theme.StudioBackground
@@ -848,88 +849,128 @@ fun EventCallSheetModal(
 }
 
 /**
- * Google AdMob Banner Preview Component
- * Displays a realistic, clean Google AdMob test banner safely without AdServices measurement crashes.
+ * Google AdMob Banner Component
+ * Embeds the real AdMob Banner AdView with smooth test/offline fallback.
  */
 @Composable
 fun AdMobBanner(
-    adUnitId: String = "ca-app-pub-3940256099942544/6300978111",
+    adUnitId: String = com.example.util.AdMobConfig.DEFAULT_LIVE_BANNER_ID,
     modifier: Modifier = Modifier
 ) {
+    var isAdLoaded by remember(adUnitId) { mutableStateOf(false) }
+    var isAdFailed by remember(adUnitId) { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(50.dp)
             .background(Color(0xFFF1F3F4))
             .border(width = 0.8.dp, color = Color(0xFFDADCE0))
-            .testTag("admob_banner_preview"),
+            .testTag("admob_banner_container"),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                // Official Ad badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0xFFF9AB00))
-                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "Ad",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+        if (!isAdFailed) {
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                factory = { context ->
+                    try {
+                        com.google.android.gms.ads.AdView(context).apply {
+                            setAdSize(com.google.android.gms.ads.AdSize.BANNER)
+                            this.adUnitId = adUnitId
+                            adListener = object : com.google.android.gms.ads.AdListener() {
+                                override fun onAdLoaded() {
+                                    super.onAdLoaded()
+                                    isAdLoaded = true
+                                    isAdFailed = false
+                                }
+
+                                override fun onAdFailedToLoad(loadAdError: com.google.android.gms.ads.LoadAdError) {
+                                    super.onAdFailedToLoad(loadAdError)
+                                    Log.w("AdMobBanner", "Banner failed to load: ${loadAdError.message}")
+                                    isAdFailed = true
+                                }
+                            }
+                            loadAd(com.google.android.gms.ads.AdRequest.Builder().build())
+                        }
+                    } catch (t: Throwable) {
+                        Log.e("AdMobBanner", "Error instantiating AdView: ${t.message}")
+                        isAdFailed = true
+                        android.view.View(context)
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            )
+        }
+
+        // When ad is loading or in test/fallback mode, show professional Ad badge and banner information
+        if (!isAdLoaded || isAdFailed) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Official Ad badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFFF9AB00))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
                         Text(
-                            text = "Google AdMob",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF202124)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "• Test Banner (320x50)",
+                            text = "Ad",
                             fontSize = 10.sp,
-                            color = Color(0xFF5F6368)
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
                         )
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Google AdMob",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF202124)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (adUnitId.contains("3940256099942544")) "• Test Mode (320x50)" else "• Live Mode (320x50)",
+                                fontSize = 10.sp,
+                                color = Color(0xFF5F6368)
+                            )
+                        }
+                        Text(
+                            text = "Maruti Photo Studio • Smart Photography Solution",
+                            fontSize = 10.sp,
+                            color = Color(0xFF5F6368),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Google Ad Choices info badge
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE8EAED)),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "Maruti Photo Studio • Smart Photography Solution",
-                        fontSize = 10.sp,
-                        color = Color(0xFF5F6368),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        text = "i",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF5F6368)
                     )
                 }
-            }
-
-            // Google Ad Choices info badge
-            Box(
-                modifier = Modifier
-                    .size(18.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE8EAED)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "i",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5F6368)
-                )
             }
         }
     }
@@ -940,7 +981,7 @@ fun AdMobBanner(
  */
 @Composable
 fun BannerAdView(
-    adUnitId: String = "ca-app-pub-3940256099942544/6300978111",
+    adUnitId: String = com.example.util.AdMobConfig.DEFAULT_LIVE_BANNER_ID,
     modifier: Modifier = Modifier
 ) {
     AdMobBanner(adUnitId = adUnitId, modifier = modifier)

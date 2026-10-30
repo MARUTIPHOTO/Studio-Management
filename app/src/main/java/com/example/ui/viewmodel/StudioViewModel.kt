@@ -69,6 +69,18 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     private val _isAdMobBannerEnabled = MutableStateFlow(repository.isAdMobBannerEnabled())
     val isAdMobBannerEnabled: StateFlow<Boolean> = _isAdMobBannerEnabled.asStateFlow()
 
+    private val _isAdMobTestMode = MutableStateFlow(repository.isAdMobTestMode())
+    val isAdMobTestMode: StateFlow<Boolean> = _isAdMobTestMode.asStateFlow()
+
+    private val _bannerAdUnitId = MutableStateFlow(repository.getBannerAdUnitId())
+    val bannerAdUnitId: StateFlow<String> = _bannerAdUnitId.asStateFlow()
+
+    private val _interstitialAdUnitId = MutableStateFlow(repository.getInterstitialAdUnitId())
+    val interstitialAdUnitId: StateFlow<String> = _interstitialAdUnitId.asStateFlow()
+
+    private val _isInterstitialAdEnabled = MutableStateFlow(repository.isInterstitialAdEnabled())
+    val isInterstitialAdEnabled: StateFlow<Boolean> = _isInterstitialAdEnabled.asStateFlow()
+
     private val _showCustomerPhoneInWhatsApp = MutableStateFlow(repository.isShowCustomerPhoneInWhatsApp())
     val showCustomerPhoneInWhatsApp: StateFlow<Boolean> = _showCustomerPhoneInWhatsApp.asStateFlow()
 
@@ -618,6 +630,53 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun setAdMobBannerEnabled(enabled: Boolean) {
         repository.setAdMobBannerEnabled(enabled)
         _isAdMobBannerEnabled.value = enabled
+    }
+
+    fun setAdMobTestMode(enabled: Boolean) {
+        repository.setAdMobTestMode(enabled)
+        _isAdMobTestMode.value = enabled
+    }
+
+    fun setBannerAdUnitId(id: String) {
+        repository.setBannerAdUnitId(id)
+        _bannerAdUnitId.value = id
+    }
+
+    fun setInterstitialAdUnitId(id: String) {
+        repository.setInterstitialAdUnitId(id)
+        _interstitialAdUnitId.value = id
+    }
+
+    fun setInterstitialAdEnabled(enabled: Boolean) {
+        repository.setInterstitialAdEnabled(enabled)
+        _isInterstitialAdEnabled.value = enabled
+    }
+
+    fun getEffectiveBannerAdUnitId(): String {
+        return com.example.util.AdMobConfig.getEffectiveBannerId(
+            isTestMode = _isAdMobTestMode.value,
+            configuredId = _bannerAdUnitId.value
+        )
+    }
+
+    fun getEffectiveInterstitialAdUnitId(): String {
+        return com.example.util.AdMobConfig.getEffectiveInterstitialId(
+            isTestMode = _isAdMobTestMode.value,
+            configuredId = _interstitialAdUnitId.value
+        )
+    }
+
+    fun showInterstitialAd(activity: android.app.Activity, onFinished: () -> Unit = {}) {
+        if (!_isInterstitialAdEnabled.value) {
+            onFinished()
+            return
+        }
+        val unitId = getEffectiveInterstitialAdUnitId()
+        com.example.util.AdMobManager.showInterstitial(
+            activity = activity,
+            adUnitId = unitId,
+            onDismissed = onFinished
+        )
     }
 
     fun backupData(onComplete: (String) -> Unit) {

@@ -75,6 +75,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        com.example.util.AdMobManager.initialize(applicationContext)
 
         setContent {
             val currentLang by viewModel.language.collectAsState()
@@ -159,15 +160,20 @@ fun MarutiAppContent(
     }
 
     val isAdMobBannerEnabled by viewModel.isAdMobBannerEnabled.collectAsState()
+    val isAdMobTestMode by viewModel.isAdMobTestMode.collectAsState()
+    val configuredBannerId by viewModel.bannerAdUnitId.collectAsState()
+    val effectiveBannerId = remember(isAdMobTestMode, configuredBannerId) {
+        viewModel.getEffectiveBannerAdUnitId()
+    }
 
     Scaffold(
         bottomBar = {
             if (!isAuthOrSplashScreen) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Google AdMob Banner Preview above Bottom Bar
+                    // Google AdMob Banner above Bottom Bar
                     if (isAdMobBannerEnabled) {
                         AdMobBanner(
-                            adUnitId = "ca-app-pub-3940256099942544/6300978111",
+                            adUnitId = effectiveBannerId,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
