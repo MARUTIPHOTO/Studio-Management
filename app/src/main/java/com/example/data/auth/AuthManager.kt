@@ -114,21 +114,23 @@ class AuthManager(private val context: Context) {
             Result.failure(Exception("ઈમેલ અથવા પાસવર્ડ ખોટો છે."))
         } catch (e: FirebaseAuthException) {
             val msg = e.message ?: ""
-            if (msg.contains("operation is not allowed", ignoreCase = true) ||
+            val code = e.errorCode
+            if (code == "ERROR_OPERATION_NOT_ALLOWED" ||
+                msg.contains("operation is not allowed", ignoreCase = true) ||
                 msg.contains("disabled", ignoreCase = true)
             ) {
-                Result.failure(Exception("⚠️ Firebase કન્સોલમાં Email/Password Provider શરૂ કરવું પડશે (Firebase Console -> Authentication -> Sign-in method -> Email/Password Enable કરો). અથવા નીચે આપેલ 'Google દ્વારા સાઇન ઇન કરો' વાપરો."))
+                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
             } else {
-                Result.failure(Exception("લૉગિનમાં ત્રુટિ: ${e.localizedMessage}"))
+                Result.failure(Exception("લૉગિનમાં ત્રુટિ: ${e.localizedMessage ?: e.message}"))
             }
         } catch (e: Exception) {
-            val msg = e.localizedMessage ?: "લૉગિન નિષ્ફળ ગયું."
+            val msg = e.localizedMessage ?: e.message ?: ""
             if (msg.contains("operation is not allowed", ignoreCase = true) ||
                 msg.contains("disabled", ignoreCase = true)
             ) {
-                Result.failure(Exception("⚠️ Firebase કન્સોલમાં Email/Password Provider શરૂ કરવું પડશે (Firebase Console -> Authentication -> Sign-in method -> Email/Password Enable કરો). અથવા નીચે આપેલ 'Google દ્વારા સાઇન ઇન કરો' વાપરો."))
+                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
             } else {
-                Result.failure(Exception(msg))
+                Result.failure(Exception(msg.ifBlank { "લૉગિન નિષ્ફળ ગયું." }))
             }
         }
     }
@@ -161,21 +163,23 @@ class AuthManager(private val context: Context) {
             Result.failure(Exception("અમાન્ય ઈમેલ ફોર્મેટ. યોગ્ય ઈમેલ દાખલ કરો."))
         } catch (e: FirebaseAuthException) {
             val msg = e.message ?: ""
-            if (msg.contains("operation is not allowed", ignoreCase = true) ||
+            val code = e.errorCode
+            if (code == "ERROR_OPERATION_NOT_ALLOWED" ||
+                msg.contains("operation is not allowed", ignoreCase = true) ||
                 msg.contains("disabled", ignoreCase = true)
             ) {
-                Result.failure(Exception("⚠️ Firebase કન્સોલમાં Email/Password Provider શરૂ કરવું પડશે (Firebase Console -> Authentication -> Sign-in method -> Email/Password Enable કરો). અથવા નીચે આપેલ 'Google દ્વારા સાઇન ઇન કરો' વાપરો."))
+                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
             } else {
-                Result.failure(Exception("સાઇન-અપ ત્રુટિ: ${e.localizedMessage}"))
+                Result.failure(Exception("સાઇન-અપ ત્રુટિ: ${e.localizedMessage ?: e.message}"))
             }
         } catch (e: Exception) {
-            val msg = e.localizedMessage ?: "એકાઉન્ટ બનાવવામાં ભૂલ આવી."
+            val msg = e.localizedMessage ?: e.message ?: ""
             if (msg.contains("operation is not allowed", ignoreCase = true) ||
                 msg.contains("disabled", ignoreCase = true)
             ) {
-                Result.failure(Exception("⚠️ Firebase કન્સોલમાં Email/Password Provider શરૂ કરવું પડશે (Firebase Console -> Authentication -> Sign-in method -> Email/Password Enable કરો). અથવા નીચે આપેલ 'Google દ્વારા સાઇન ઇન કરો' વાપરો."))
+                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
             } else {
-                Result.failure(Exception(msg))
+                Result.failure(Exception(msg.ifBlank { "એકાઉન્ટ બનાવવામાં ભૂલ આવી." }))
             }
         }
     }

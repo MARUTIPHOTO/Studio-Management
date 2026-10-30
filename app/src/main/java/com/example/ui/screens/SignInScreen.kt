@@ -247,15 +247,39 @@ fun SignInScreen(
                         .fillMaxWidth()
                         .padding(bottom = 14.dp)
                 ) {
-                    Text(
-                        text = errorMessage ?: "",
-                        color = Color(0xFFC62828),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
+                    Column(
                         modifier = Modifier.padding(14.dp),
-                        textAlign = TextAlign.Start,
-                        lineHeight = 18.sp
-                    )
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFC62828),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Start,
+                            lineHeight = 18.sp
+                        )
+                        if (authMode != 0) {
+                            Button(
+                                onClick = {
+                                    authMode = 0
+                                    errorMessage = null
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(40.dp)
+                            ) {
+                                Text(
+                                    text = "Google સાઇન-ઇન વાપરો (૧-ક્લિક)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -393,6 +417,23 @@ fun SignInScreen(
                             fontWeight = FontWeight.Bold,
                             color = StudioDarkText
                         )
+
+                        // Helpful Guidance Banner
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFFE8F0FE))
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "💡 સલાહ: ૧-ક્લિકમાં સરળતાથી લૉગિન કરવા માટે 'Google લૉગિન' ટેબ વાપરો.",
+                                fontSize = 11.sp,
+                                color = Color(0xFF1967D2),
+                                lineHeight = 15.sp
+                            )
+                        }
 
                         // Email Field
                         OutlinedTextField(
