@@ -8,6 +8,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 
@@ -20,10 +21,20 @@ object AdMobManager {
     fun initialize(context: Context) {
         if (isInitialized) return
         try {
-            MobileAds.initialize(context) { status ->
-                Log.d(TAG, "MobileAds initialized: $status")
-                isInitialized = true
-            }
+            Thread {
+                try {
+                    val requestConfig = RequestConfiguration.Builder()
+                        .setTestDeviceIds(listOf(AdRequest.DEVICE_ID_EMULATOR))
+                        .build()
+                    MobileAds.setRequestConfiguration(requestConfig)
+                    MobileAds.initialize(context) { status ->
+                        Log.d(TAG, "MobileAds initialized: $status")
+                        isInitialized = true
+                    }
+                } catch (t: Throwable) {
+                    Log.w(TAG, "MobileAds init warning: ${t.message}")
+                }
+            }.start()
         } catch (t: Throwable) {
             Log.e(TAG, "MobileAds initialize error: ${t.message}")
         }

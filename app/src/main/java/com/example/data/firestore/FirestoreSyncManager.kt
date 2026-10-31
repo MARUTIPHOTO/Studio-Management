@@ -16,10 +16,16 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class FirestoreSyncManager(private val context: Context) {
-    // CRITICAL: Always use the provisioned database ID
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(
-        context.getString(R.string.firestore_database_id)
-    )
+    private val firestore: FirebaseFirestore = try {
+        val dbId = context.getString(R.string.firestore_database_id)
+        if (dbId.isNotBlank() && dbId != "(default)") {
+            FirebaseFirestore.getInstance(dbId)
+        } else {
+            FirebaseFirestore.getInstance()
+        }
+    } catch (e: Exception) {
+        FirebaseFirestore.getInstance()
+    }
     private val localDb = AppDatabase.getInstance(context)
     private val customerDao = localDb.customerDao()
     private val eventDao = localDb.eventDao()

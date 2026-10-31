@@ -29,8 +29,8 @@
     <string name="settings_saved_toast">Settings saved successfully!</string>
 
     <!-- Firebase configuration strings -->
-    <string name="google_app_id" translatable="false">1:349418114396:android:dba3fd36151863cb1d8599</string>
-    <string name="gcm_defaultSenderId" translatable="false">349418114396</string>
-    <string name="project_id" translatable="false">gen-lang-client-0524337453</string>
-    <string name="default_web_client_id" translatable="false">349418114396-dsic9m4shk9j1tatmugidqld9hgm8r4q.apps.googleusercontent.com</string>
+    <string name="google_app_id" translatable="false">1:409146622754:android:98b00ff2de1b19d3f4db7b</string>
+    <string name="gcm_defaultSenderId" translatable="false">409146622754</string>
+    <string name="project_id" translatable="false">studio-management-f2469</string>
+    <string name="default_web_client_id" translatable="false">409146622754-v3pm5vdggdmh87uud9s3n6frcnop6q1k.apps.googleusercontent.com</string>
 </resources>
