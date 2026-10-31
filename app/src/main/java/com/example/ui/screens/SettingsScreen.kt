@@ -142,13 +142,22 @@ fun SettingsScreen(
     val isInterstitialAdEnabled by viewModel.isInterstitialAdEnabled.collectAsState()
     val context = LocalContext.current
 
-    var studioName by remember { mutableStateOf(profile.studioName) }
-    var ownerName by remember { mutableStateOf(profile.ownerName) }
-    var mobileNumber by remember { mutableStateOf(profile.mobileNumber) }
-    var whatsAppNumber by remember { mutableStateOf(profile.whatsAppNumber) }
-    var address by remember { mutableStateOf(profile.address) }
-    var logoUri by remember { mutableStateOf(profile.logoUri) }
+    var studioName by remember(profile.studioName) { mutableStateOf(profile.studioName) }
+    var ownerName by remember(profile.ownerName) { mutableStateOf(profile.ownerName) }
+    var mobileNumber by remember(profile.mobileNumber) { mutableStateOf(profile.mobileNumber) }
+    var whatsAppNumber by remember(profile.whatsAppNumber) { mutableStateOf(profile.whatsAppNumber) }
+    var address by remember(profile.address) { mutableStateOf(profile.address) }
+    var logoUri by remember(profile.logoUri) { mutableStateOf(profile.logoUri) }
     var showSaveSuccessBanner by remember { mutableStateOf(false) }
+
+    LaunchedEffect(profile) {
+        studioName = profile.studioName
+        ownerName = profile.ownerName
+        mobileNumber = profile.mobileNumber
+        whatsAppNumber = profile.whatsAppNumber
+        address = profile.address
+        logoUri = profile.logoUri
+    }
 
     // Dynamic string resolution based on current selected language preference
     val studioProfileHeader = remember(currentLang) {
@@ -201,11 +210,11 @@ fun SettingsScreen(
                 val newLogoPath = logoFile.absolutePath
                 logoUri = newLogoPath
                 val currentEditedProfile = profile.copy(
-                    studioName = studioName.trim().ifBlank { profile.studioName },
-                    ownerName = ownerName.trim().ifBlank { profile.ownerName },
-                    mobileNumber = mobileNumber.trim().ifBlank { profile.mobileNumber },
-                    whatsAppNumber = whatsAppNumber.trim().ifBlank { profile.whatsAppNumber },
-                    address = address.trim().ifBlank { profile.address },
+                    studioName = studioName.trim(),
+                    ownerName = ownerName.trim(),
+                    mobileNumber = mobileNumber.trim(),
+                    whatsAppNumber = whatsAppNumber.trim(),
+                    address = address.trim(),
                     logoUri = newLogoPath
                 )
                 viewModel.saveStudioProfile(currentEditedProfile)
@@ -213,11 +222,11 @@ fun SettingsScreen(
                 val fallbackUri = selectedUri.toString()
                 logoUri = fallbackUri
                 val currentEditedProfile = profile.copy(
-                    studioName = studioName.trim().ifBlank { profile.studioName },
-                    ownerName = ownerName.trim().ifBlank { profile.ownerName },
-                    mobileNumber = mobileNumber.trim().ifBlank { profile.mobileNumber },
-                    whatsAppNumber = whatsAppNumber.trim().ifBlank { profile.whatsAppNumber },
-                    address = address.trim().ifBlank { profile.address },
+                    studioName = studioName.trim(),
+                    ownerName = ownerName.trim(),
+                    mobileNumber = mobileNumber.trim(),
+                    whatsAppNumber = whatsAppNumber.trim(),
+                    address = address.trim(),
                     logoUri = fallbackUri
                 )
                 viewModel.saveStudioProfile(currentEditedProfile)
@@ -346,11 +355,11 @@ fun SettingsScreen(
                                         onClick = {
                                             logoUri = ""
                                             val currentEditedProfile = profile.copy(
-                                                studioName = studioName.trim().ifBlank { profile.studioName },
-                                                ownerName = ownerName.trim().ifBlank { profile.ownerName },
-                                                mobileNumber = mobileNumber.trim().ifBlank { profile.mobileNumber },
-                                                whatsAppNumber = whatsAppNumber.trim().ifBlank { profile.whatsAppNumber },
-                                                address = address.trim().ifBlank { profile.address },
+                                                studioName = studioName.trim(),
+                                                ownerName = ownerName.trim(),
+                                                mobileNumber = mobileNumber.trim(),
+                                                whatsAppNumber = whatsAppNumber.trim(),
+                                                address = address.trim(),
                                                 logoUri = ""
                                             )
                                             viewModel.saveStudioProfile(currentEditedProfile)
@@ -454,7 +463,7 @@ fun SettingsScreen(
                             // Save Settings Button
                             Button(
                                 onClick = {
-                                    val finalStudioName = studioName.trim().ifBlank { "Maruti Photo Studio" }
+                                    val finalStudioName = studioName.trim()
                                     val updated = profile.copy(
                                         studioName = finalStudioName,
                                         ownerName = ownerName.trim(),

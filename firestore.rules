@@ -23,14 +23,17 @@ service cloud.firestore {
     }
 
     function isValidUserProfile(data) {
-      return data.studioName is string && data.studioName.size() >= 1 && data.studioName.size() <= 100 &&
-             data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 100 &&
-             data.mobileNumber is string && data.mobileNumber.size() >= 5 && data.mobileNumber.size() <= 30 &&
+      return (!('studioName' in data) || (data.studioName is string && data.studioName.size() <= 100)) &&
+             (!('ownerName' in data) || (data.ownerName is string && data.ownerName.size() <= 100)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('mobileNumber' in data) || (data.mobileNumber is string && data.mobileNumber.size() <= 30)) &&
              (!('whatsAppNumber' in data) || (data.whatsAppNumber is string && data.whatsAppNumber.size() <= 30)) &&
              (!('address' in data) || (data.address is string && data.address.size() <= 200)) &&
              (!('logoUri' in data) || (data.logoUri is string && data.logoUri.size() <= 1000)) &&
              (!('createdAt' in data) || (data.createdAt is timestamp && data.createdAt <= request.time)) &&
-             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time)) &&
+             (!('lastLoginAt' in data) || (data.lastLoginAt is timestamp && data.lastLoginAt <= request.time));
     }
 
     function isValidCustomer(data) {

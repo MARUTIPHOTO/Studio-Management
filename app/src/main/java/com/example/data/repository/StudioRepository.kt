@@ -186,12 +186,14 @@ class StudioRepository(private val context: Context) {
 
     // Studio Profile
     fun getStudioProfile(): StudioProfile {
+        val savedStudioName = prefs.getString("studio_name", null)
+        val savedOwnerName = prefs.getString("owner_name", null)
         return StudioProfile(
-            studioName = prefs.getString("studio_name", "Maruti Photo Studio") ?: "Maruti Photo Studio",
-            ownerName = prefs.getString("owner_name", "Kishorbhai Patel") ?: "Kishorbhai Patel",
-            mobileNumber = prefs.getString("mobile_number", "9825012345") ?: "9825012345",
-            whatsAppNumber = prefs.getString("whatsapp_number", "9825012345") ?: "9825012345",
-            address = prefs.getString("address", "India") ?: "India",
+            studioName = savedStudioName ?: "Studio Management",
+            ownerName = savedOwnerName ?: "Studio Owner",
+            mobileNumber = prefs.getString("mobile_number", "") ?: "",
+            whatsAppNumber = prefs.getString("whatsapp_number", "") ?: "",
+            address = prefs.getString("address", "") ?: "",
             logoUri = prefs.getString("logo_uri", "") ?: "",
             lastBackupTime = prefs.getLong("last_backup_time", 0L)
         )
@@ -209,6 +211,10 @@ class StudioRepository(private val context: Context) {
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
             firestoreSync.saveProfileToCloud(profile)
         }
+    }
+
+    suspend fun onUserSignedIn(): Result<Int> {
+        return firestoreSync.recordUserLoginAndSync()
     }
 
 

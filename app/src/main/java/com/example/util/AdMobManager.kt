@@ -18,15 +18,29 @@ object AdMobManager {
     private var interstitialAd: InterstitialAd? = null
     private var isInterstitialLoading = false
 
+    fun isEmulator(): Boolean {
+        return (android.os.Build.FINGERPRINT.startsWith("generic")
+                || android.os.Build.FINGERPRINT.startsWith("unknown")
+                || android.os.Build.MODEL.contains("google_sdk")
+                || android.os.Build.MODEL.contains("Emulator")
+                || android.os.Build.MODEL.contains("Android SDK built for x86")
+                || android.os.Build.MANUFACTURER.contains("Genymotion")
+                || (android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic"))
+                || "google_sdk" == android.os.Build.PRODUCT
+                || android.os.Build.HARDWARE.contains("goldfish")
+                || android.os.Build.HARDWARE.contains("ranchu"))
+    }
+
     fun initialize(context: Context) {
         if (isInitialized) return
+        if (isEmulator()) {
+            Log.d(TAG, "Running on emulator preview - skipping AdMob background service binding")
+            isInitialized = true
+            return
+        }
         try {
             Thread {
                 try {
-                    val requestConfig = RequestConfiguration.Builder()
-                        .setTestDeviceIds(listOf(AdRequest.DEVICE_ID_EMULATOR))
-                        .build()
-                    MobileAds.setRequestConfiguration(requestConfig)
                     MobileAds.initialize(context) { status ->
                         Log.d(TAG, "MobileAds initialized: $status")
                         isInitialized = true
@@ -47,6 +61,10 @@ object AdMobManager {
         onFailed: ((String) -> Unit)? = null
     ) {
         if (isInterstitialLoading) return
+        if (isEmulator()) {
+            onFailed?.invoke("Emulator mode")
+            return
+        }
         isInterstitialLoading = true
         try {
             val adRequest = AdRequest.Builder().build()

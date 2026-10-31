@@ -276,10 +276,14 @@ class FirestoreSyncManager(private val context: Context) {
     }
 
     suspend fun saveProfileToCloud(profile: StudioProfile) = withContext(Dispatchers.IO) {
-        val uid = getCurrentUserId() ?: return@withContext
+        val user = FirebaseAuth.getInstance().currentUser ?: return@withContext
+        val uid = user.uid
         try {
             val docRef = firestore.collection("users").document(uid)
             val data = hashMapOf<String, Any>(
+                "userId" to uid,
+                "email" to (user.email ?: ""),
+                "displayName" to (user.displayName ?: ""),
                 "studioName" to profile.studioName,
                 "ownerName" to profile.ownerName,
                 "mobileNumber" to profile.mobileNumber,
@@ -289,8 +293,47 @@ class FirestoreSyncManager(private val context: Context) {
                 "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
             )
             docRef.set(data, SetOptions.merge()).await()
+            Log.d(TAG, "Profile saved to cloud with email: ${user.email}, studioName: ${profile.studioName}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save profile to cloud", e)
+        }
+    }
+
+    suspend fun recordUserLoginAndSync(): Result<Int> = withContext(Dispatchers.IO) {
+        val user = FirebaseAuth.getInstance().currentUser ?: return@withContext Result.failure(Exception("Not logged in"))
+        val uid = user.uid
+        try {
+            val docRef = firestore.collection("users").document(uid)
+            val prefs = context.getSharedPreferences("maruti_studio_prefs", Context.MODE_PRIVATE)
+            val currentStudioName = prefs.getString("studio_name", null) ?: "Studio Management"
+            val currentOwnerName = prefs.getString("owner_name", null) ?: (user.displayName ?: "")
+            val currentMobile = prefs.getString("mobile_number", "") ?: ""
+            val currentWhatsApp = prefs.getString("whatsapp_number", "") ?: ""
+            val currentAddress = prefs.getString("address", "") ?: ""
+            val currentLogo = prefs.getString("logo_uri", "") ?: ""
+
+            // Save user profile with email ID to Firebase Firestore
+            val userData = hashMapOf<String, Any>(
+                "userId" to uid,
+                "email" to (user.email ?: ""),
+                "displayName" to (user.displayName ?: ""),
+                "studioName" to currentStudioName,
+                "ownerName" to currentOwnerName,
+                "mobileNumber" to currentMobile,
+                "whatsAppNumber" to currentWhatsApp,
+                "address" to currentAddress,
+                "logoUri" to currentLogo,
+                "lastLoginAt" to com.google.firebase.firestore.FieldValue.serverTimestamp(),
+                "updatedAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            )
+            docRef.set(userData, SetOptions.merge()).await()
+            Log.d(TAG, "Logged in user saved to Firestore: uid=$uid, email=${user.email}")
+
+            // Sync from cloud
+            syncAllFromCloud()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in recordUserLoginAndSync", e)
+            syncAllFromCloud()
         }
     }
 

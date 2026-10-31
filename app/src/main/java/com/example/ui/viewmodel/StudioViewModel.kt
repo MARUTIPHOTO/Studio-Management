@@ -828,7 +828,17 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun onUserSignedIn() {
-        syncFromCloud()
+        viewModelScope.launch {
+            _isCloudSyncing.value = true
+            val result = repository.onUserSignedIn()
+            _isCloudSyncing.value = false
+            _studioProfile.value = repository.getStudioProfile()
+            result.onSuccess { count ->
+                _userMessage.emit("લૉગિન સફળ! ડેટા ક્લાઉડ સાથે સિંક થયો.")
+            }.onFailure { e ->
+                _userMessage.emit("લૉગિન સફળ!")
+            }
+        }
         navigateTo(Screen.Home, clearStack = true)
     }
 

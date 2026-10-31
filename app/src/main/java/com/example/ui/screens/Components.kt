@@ -859,6 +859,7 @@ fun AdMobBanner(
 ) {
     var isAdLoaded by remember(adUnitId) { mutableStateOf(false) }
     var isAdFailed by remember(adUnitId) { mutableStateOf(false) }
+    val isEmulator = remember { com.example.util.AdMobManager.isEmulator() }
 
     Box(
         modifier = modifier
@@ -869,7 +870,7 @@ fun AdMobBanner(
             .testTag("admob_banner_container"),
         contentAlignment = Alignment.Center
     ) {
-        if (!isAdFailed) {
+        if (!isAdFailed && !isEmulator) {
             AndroidView(
                 modifier = Modifier
                     .fillMaxWidth()
