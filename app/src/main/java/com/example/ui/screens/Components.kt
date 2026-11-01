@@ -58,6 +58,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -588,6 +589,10 @@ fun EventCallSheetModal(
 ) {
     val context = LocalContext.current
     var showCustomerPhone by remember { mutableStateOf(initialShowCustomerPhone) }
+    val subscriptionManager = remember { com.example.util.SubscriptionManager.getInstance(context) }
+    val subscriptionState by subscriptionManager.subscriptionState.collectAsState()
+    val isUnlocked = subscriptionState.isWhatsAppSharingUnlocked
+    var showPaywallDialog by remember { mutableStateOf(false) }
 
     // Dynamically mask or include customer phone based on studio owner's toggle
     val activeCallSheetText = remember(callSheetText, showCustomerPhone, customerMobile) {
@@ -735,22 +740,64 @@ fun EventCallSheetModal(
                     )
                 }
 
+                // Locked Status Warning (Shown only when WhatsApp sharing is locked)
+                if (!isUnlocked) {
+                    Card(
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showPaywallDialog = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFFB45309),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "WhatsApp શેરિંગ લૉક છે. અનલૉક કરવા માટે ૨ મિત્રોને જોડો (૧ વર્ષ ફ્રી) અથવા સબસ્ક્રાઇબ કરો 🔒",
+                                fontSize = 11.sp,
+                                color = Color(0xFF92400E),
+                                lineHeight = 15.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
                 // Action 1: Send to Customer
                 Button(
                     onClick = {
-                        onSendWhatsApp(customerMobile, activeCallSheetText)
+                        if (isUnlocked) {
+                            onSendWhatsApp(customerMobile, activeCallSheetText)
+                        } else {
+                            showPaywallDialog = true
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(46.dp)
                         .testTag("send_call_sheet_customer_btn"),
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StudioGreenSuccess)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isUnlocked) StudioGreenSuccess else Color(0xFFD97706)
+                    )
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        imageVector = if (isUnlocked) Icons.Default.Send else Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "ગ્રાહકને મોકલો ($customerName)",
+                        text = if (isUnlocked) "ગ્રાહકને મોકલો ($customerName)" else "Unlock to Send ($customerName) 📲",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -775,10 +822,14 @@ fun EventCallSheetModal(
                         assignedCrew.forEach { crew ->
                             OutlinedButton(
                                 onClick = {
-                                    if (onSendCrewPersonal != null) {
-                                        onSendCrewPersonal(crew, showCustomerPhone)
+                                    if (isUnlocked) {
+                                        if (onSendCrewPersonal != null) {
+                                            onSendCrewPersonal(crew, showCustomerPhone)
+                                        } else {
+                                            onSendWhatsApp(crew.mobile, activeCallSheetText)
+                                        }
                                     } else {
-                                        onSendWhatsApp(crew.mobile, activeCallSheetText)
+                                        showPaywallDialog = true
                                     }
                                 },
                                 modifier = Modifier
@@ -788,14 +839,14 @@ fun EventCallSheetModal(
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = StudioDarkText)
                             ) {
                                 Icon(
-                                    Icons.Default.Chat,
+                                    imageVector = if (isUnlocked) Icons.Default.Chat else Icons.Default.Lock,
                                     contentDescription = null,
                                     modifier = Modifier.size(14.dp),
-                                    tint = StudioGreenDark
+                                    tint = if (isUnlocked) StudioGreenDark else Color(0xFFD97706)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "${crew.name} (${crew.role})",
+                                    text = if (isUnlocked) "${crew.name} (${crew.role})" else "🔒 ${crew.name} (${crew.role})",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -811,10 +862,14 @@ fun EventCallSheetModal(
                 ) {
                     OutlinedButton(
                         onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clip = ClipData.newPlainText("Event Call Sheet", activeCallSheetText)
-                            clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "કોલ શીટ કોપી થઈ ગઈ! (Copied)", Toast.LENGTH_SHORT).show()
+                            if (isUnlocked) {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("Event Call Sheet", activeCallSheetText)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "કોલ શીટ કોપી થઈ ગઈ! (Copied)", Toast.LENGTH_SHORT).show()
+                            } else {
+                                showPaywallDialog = true
+                            }
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -822,14 +877,22 @@ fun EventCallSheetModal(
                             .testTag("copy_call_sheet_btn"),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Icon(
+                            imageVector = if (isUnlocked) Icons.Default.ContentCopy else Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Copy", fontSize = 12.sp)
+                        Text(if (isUnlocked) "Copy" else "Copy (🔒)", fontSize = 12.sp)
                     }
 
                     OutlinedButton(
                         onClick = {
-                            onShareGeneral(activeCallSheetText)
+                            if (isUnlocked) {
+                                onShareGeneral(activeCallSheetText)
+                            } else {
+                                showPaywallDialog = true
+                            }
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -837,15 +900,40 @@ fun EventCallSheetModal(
                             .testTag("share_call_sheet_btn"),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(15.dp))
+                        Icon(
+                            imageVector = if (isUnlocked) Icons.Default.Share else Icons.Default.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Share", fontSize = 12.sp)
+                        Text(if (isUnlocked) "Share" else "Share (🔒)", fontSize = 12.sp)
                     }
                 }
             }
         },
         confirmButton = {}
     )
+
+    if (showPaywallDialog) {
+        val strings = remember { com.example.ui.strings.AppStrings.Gujarati }
+        SubscriptionPaywallDialog(
+            state = subscriptionState,
+            strings = strings,
+            onDismiss = { showPaywallDialog = false },
+            onInviteWhatsApp = { subscriptionManager.shareInviteOnWhatsApp(com.example.ui.strings.AppLanguage.GUJARATI) },
+            onApplyReferralCode = { code ->
+                subscriptionManager.applyReferral(code) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                }
+            },
+            onActivatePlan = { plan ->
+                subscriptionManager.activatePaidPlan(plan) {
+                    Toast.makeText(context, "સબસ્ક્રિપ્શન એક્ટિવેટ થયું! 🎉", Toast.LENGTH_SHORT).show()
+                    showPaywallDialog = false
+                }
+            }
+        )
+    }
 }
 
 /**

@@ -46,6 +46,8 @@ sealed class Screen {
 
 class StudioViewModel(application: Application) : AndroidViewModel(application) {
     val authManager = com.example.data.auth.AuthManager(application)
+    val subscriptionManager = com.example.util.SubscriptionManager.getInstance(application)
+    val subscriptionState = subscriptionManager.subscriptionState
     val currentUser = authManager.authStateFlow().stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
@@ -830,6 +832,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun onUserSignedIn() {
         viewModelScope.launch {
             _isCloudSyncing.value = true
+            repository.clearAllLocalData()
             val result = repository.onUserSignedIn()
             _isCloudSyncing.value = false
             _studioProfile.value = repository.getStudioProfile()
@@ -858,9 +861,30 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     fun signOut() {
         viewModelScope.launch {
+            repository.clearAllLocalData()
             authManager.signOut()
             navigateTo(Screen.SignIn, clearStack = true)
             _userMessage.emit("સફળતાપૂર્વક સાઇન આઉટ થયું")
+        }
+    }
+
+    fun shareInviteWhatsApp() {
+        subscriptionManager.shareInviteOnWhatsApp(_language.value)
+    }
+
+    fun applyReferral(code: String) {
+        subscriptionManager.applyReferral(code) { success, msg ->
+            viewModelScope.launch {
+                _userMessage.emit(msg)
+            }
+        }
+    }
+
+    fun activatePaidPlan(plan: String) {
+        subscriptionManager.activatePaidPlan(plan) {
+            viewModelScope.launch {
+                _userMessage.emit("સબસ્ક્રિપ્શન સફળતાપૂર્વક એક્ટિવેટ થયું! 🎉")
+            }
         }
     }
 }

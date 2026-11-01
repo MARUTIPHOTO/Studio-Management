@@ -102,6 +102,8 @@ fun HomeScreen(
     }
     val currentUser by viewModel.currentUser.collectAsState()
     val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
+    val subscriptionState by viewModel.subscriptionState.collectAsState()
+    var showSubscriptionDialog by remember { mutableStateOf(false) }
 
     var customerToDelete by remember { mutableStateOf<Customer?>(null) }
     var callSheetCustomer by remember { mutableStateOf<Customer?>(null) }
@@ -248,6 +250,17 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+
+            // 🏆 Early Bird Referral & Subscription Launch Offer Banner Card
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                EarlyBirdReferralBannerCard(
+                    state = subscriptionState,
+                    strings = strings,
+                    onInviteClick = { viewModel.shareInviteWhatsApp() },
+                    onDetailsClick = { showSubscriptionDialog = true }
+                )
             }
 
             // Main Shortcut Buttons
@@ -440,6 +453,22 @@ fun HomeScreen(
                 viewModel.shareText(text)
             },
             onDismiss = { callSheetCustomer = null }
+        )
+    }
+
+    if (showSubscriptionDialog) {
+        SubscriptionPaywallDialog(
+            state = subscriptionState,
+            strings = strings,
+            onDismiss = { showSubscriptionDialog = false },
+            onInviteWhatsApp = { viewModel.shareInviteWhatsApp() },
+            onApplyReferralCode = { code ->
+                viewModel.applyReferral(code)
+            },
+            onActivatePlan = { plan ->
+                viewModel.activatePaidPlan(plan)
+                showSubscriptionDialog = false
+            }
         )
     }
 }

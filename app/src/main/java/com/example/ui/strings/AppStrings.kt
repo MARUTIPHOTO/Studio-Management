@@ -193,7 +193,27 @@ data class StringsDefinition(
     val retryBtn: String,
     val privacyPolicyTitle: String,
     val privacyPolicyBtn: String,
-    val privacyPolicySub: String
+    val privacyPolicySub: String,
+
+    // Early Bird Referral & Subscription
+    val earlyBirdBadge: String,
+    val referralCardTitle: String,
+    val referralCardSub: String,
+    val slotsRemainingLabel: String,
+    val friendsJoinedLabel: String,
+    val inviteWhatsAppBtn: String,
+    val enterFriendCodeBtn: String,
+    val unlockCallSheetTitle: String,
+    val unlockCallSheetSub: String,
+    val planMonthlyLabel: String,
+    val planYearlyLabel: String,
+    val btnGetMonthly: String,
+    val btnGetYearly: String,
+    val premiumUnlockedBadge: String,
+    val trialDaysRemainingLabel: String,
+    val referralSuccessMsg: String,
+    val codeAppliedMsg: String,
+    val unlockToSendBtn: String
 )
 
 object AppStrings {
@@ -361,7 +381,27 @@ object AppStrings {
         retryBtn = "ફરી પ્રયાસ કરો (Retry)",
         privacyPolicyTitle = "પ્રાઈવસી પોલિસી (Privacy Policy)",
         privacyPolicyBtn = "પ્રાઈવસી પોલિસી જુઓ",
-        privacyPolicySub = "તમારો ડેટા સુરક્ષિત છે અને ફક્ત આ ડિવાઇસમાં રહે છે"
+        privacyPolicySub = "તમારો ડેટા સુરક્ષિત છે અને ફક્ત આ ડિવાઇસમાં રહે છે",
+
+        // Early Bird Referral & Subscription
+        earlyBirdBadge = "🏆 લિમિટેડ લૉન્ચ ઑફર (પહેલા ૨૦૦ સ્ટુડિયો)",
+        referralCardTitle = "૨ મિત્રોને જોડો = ૧ વર્ષ ફ્રી! 🎁",
+        referralCardSub = "કોઈપણ ૨ ફોટોગ્રાફર મિત્રોને ઇન્વાઇટ કરો અને મેળવો ૧ વર્ષ માટે WhatsApp શેરિંગ ફ્રી.",
+        slotsRemainingLabel = "બાકી સીટો: %d/૨૦૦",
+        friendsJoinedLabel = "મિત્રો જોડાયા: %d/૨",
+        inviteWhatsAppBtn = "Invite on WhatsApp 📲",
+        enterFriendCodeBtn = "મિત્રનો કોડ નાખો",
+        unlockCallSheetTitle = "WhatsApp શેરિંગ અનલૉક કરો 🔒",
+        unlockCallSheetSub = "કૉલ શીટ અને ક્રૂ પાસ WhatsApp પર મોકલવા માટે સબસ્ક્રાઇબ કરો અથવા ૨ મિત્રોને રેફર કરીને ૧ વર્ષ ફ્રી મેળવો.",
+        planMonthlyLabel = "₹૯૯ / ૧ મહિનો",
+        planYearlyLabel = "₹૫૯૯ / ૧ વર્ષ (૫૦% બચત)",
+        btnGetMonthly = "Get 1 Month ⚡",
+        btnGetYearly = "Unlock 1 Year 👑",
+        premiumUnlockedBadge = "👑 VIP ૧ વર્ષ ફ્રી એક્ટિવ",
+        trialDaysRemainingLabel = "ટ્રાયલના %d દિવસ બાકી",
+        referralSuccessMsg = "અભિનંદન! તમારું ૧ વર્ષનું ફ્રી સબસ્ક્રિપ્શન અનલૉક થઈ ગયું છે! 🎉",
+        codeAppliedMsg = "રેફરલ કોડ સફળતાપૂર્વક લાગુ થયો!",
+        unlockToSendBtn = "Unlock to Send 📲"
     )
 
     val Hindi = StringsDefinition(
@@ -528,7 +568,27 @@ object AppStrings {
         retryBtn = "पुन: प्रयास करें (Retry)",
         privacyPolicyTitle = "प्राइवेसी पॉलिसी (Privacy Policy)",
         privacyPolicyBtn = "प्राइवेसी पॉलिसी देखें",
-        privacyPolicySub = "आपका डेटा सुरक्षित है और सिर्फ इसी डिवाइस में रहता है"
+        privacyPolicySub = "आपका डेटा सुरक्षित है और सिर्फ इसी डिवाइस में रहता है",
+
+        // Early Bird Referral & Subscription
+        earlyBirdBadge = "🏆 लिमिटेड लॉन्च ऑफर (पहले २०० स्टूडियो)",
+        referralCardTitle = "२ दोस्तों को जोड़ें = १ साल फ्री! 🎁",
+        referralCardSub = "किन्हीं २ फोटोग्राफर दोस्तों को इनवाइट करें और १ साल के लिए WhatsApp शेयरिंग फ्री पाएं।",
+        slotsRemainingLabel = "शेष सीटें: %d/२००",
+        friendsJoinedLabel = "दोस्त जुड़े: %d/२",
+        inviteWhatsAppBtn = "Invite on WhatsApp 📲",
+        enterFriendCodeBtn = "दोस्त का कोड डालें",
+        unlockCallSheetTitle = "WhatsApp शेयरिंग अनलॉक करें 🔒",
+        unlockCallSheetSub = "कॉल शीट और क्रू पास WhatsApp पर भेजने के लिए सब्सक्राइब करें या २ दोस्तों को रेफर करके १ साल फ्री पाएं।",
+        planMonthlyLabel = "₹९९ / १ महीना",
+        planYearlyLabel = "₹५९૯ / १ साल (५०% छूट)",
+        btnGetMonthly = "Get 1 Month ⚡",
+        btnGetYearly = "Unlock 1 Year 👑",
+        premiumUnlockedBadge = "👑 VIP १ साल फ्री एक्टिव",
+        trialDaysRemainingLabel = "ट्रायल के %d दिन बाकी",
+        referralSuccessMsg = "बधाई हो! आपका १ साल का फ्री सब्सक्रिप्शन अनलॉक हो गया है! 🎉",
+        codeAppliedMsg = "रेफरल कोड सफलतापूर्वक लागू हुआ!",
+        unlockToSendBtn = "Unlock to Send 📲"
     )
 
     val English = StringsDefinition(
@@ -695,7 +755,27 @@ object AppStrings {
         retryBtn = "Retry",
         privacyPolicyTitle = "Privacy Policy",
         privacyPolicyBtn = "View Privacy Policy",
-        privacyPolicySub = "Your data is secure and stored locally on this device"
+        privacyPolicySub = "Your data is secure and stored locally on this device",
+
+        // Early Bird Referral & Subscription
+        earlyBirdBadge = "🏆 Limited Launch Offer (First 200 Studios)",
+        referralCardTitle = "Refer 2 Friends = 1 Year Free! 🎁",
+        referralCardSub = "Invite any 2 photographer friends and get 1 Year WhatsApp sharing completely free.",
+        slotsRemainingLabel = "Slots Left: %d/200",
+        friendsJoinedLabel = "Friends Joined: %d/2",
+        inviteWhatsAppBtn = "Invite on WhatsApp 📲",
+        enterFriendCodeBtn = "Enter Friend's Code",
+        unlockCallSheetTitle = "Unlock WhatsApp Sharing 🔒",
+        unlockCallSheetSub = "Subscribe to send call sheets & crew passes on WhatsApp, or refer 2 friends to get 1 year free.",
+        planMonthlyLabel = "₹99 / 1 Month",
+        planYearlyLabel = "₹599 / 1 Year (50% Off)",
+        btnGetMonthly = "Get 1 Month ⚡",
+        btnGetYearly = "Unlock 1 Year 👑",
+        premiumUnlockedBadge = "👑 VIP 1 Year Free Active",
+        trialDaysRemainingLabel = "%d Days Trial Remaining",
+        referralSuccessMsg = "Congratulations! Your 1-Year Free Subscription is unlocked! 🎉",
+        codeAppliedMsg = "Referral code applied successfully!",
+        unlockToSendBtn = "Unlock to Send 📲"
     )
 
     fun get(language: AppLanguage): StringsDefinition {
