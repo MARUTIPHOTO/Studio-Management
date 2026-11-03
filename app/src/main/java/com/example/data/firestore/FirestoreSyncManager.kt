@@ -337,6 +337,44 @@ class FirestoreSyncManager(private val context: Context) {
         }
     }
 
+    suspend fun syncAllToCloud(): Result<Int> = withContext(Dispatchers.IO) {
+        val uid = getCurrentUserId() ?: return@withContext Result.failure(Exception("Not logged in"))
+        try {
+            var itemsUploaded = 0
+            val customers = customerDao.getAllCustomersSync()
+            for (c in customers) {
+                saveCustomerToCloud(c)
+                itemsUploaded++
+            }
+            val events = eventDao.getAllEventsSync()
+            for (e in events) {
+                saveEventToCloud(e)
+                itemsUploaded++
+            }
+            val crew = crewDao.getAllCrewSync()
+            for (cr in crew) {
+                saveCrewToCloud(cr)
+                itemsUploaded++
+            }
+            val prefs = context.getSharedPreferences("maruti_studio_prefs", Context.MODE_PRIVATE)
+            val profile = StudioProfile(
+                studioName = prefs.getString("studio_name", "Studio Management") ?: "Studio Management",
+                ownerName = prefs.getString("owner_name", "") ?: "",
+                mobileNumber = prefs.getString("mobile_number", "") ?: "",
+                whatsAppNumber = prefs.getString("whatsapp_number", "") ?: "",
+                address = prefs.getString("address", "") ?: "",
+                logoUri = prefs.getString("logo_uri", "") ?: "",
+                lastBackupTime = System.currentTimeMillis()
+            )
+            saveProfileToCloud(profile)
+            Log.d(TAG, "syncAllToCloud successfully backed up $itemsUploaded items to Firestore")
+            Result.success(itemsUploaded)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in syncAllToCloud", e)
+            Result.failure(e)
+        }
+    }
+
     companion object {
         private const val TAG = "FirestoreSyncManager"
     }

@@ -490,7 +490,7 @@ fun CustomerSaveSuccessView(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "${customer.name} • ${customer.mobile}",
+            text = "${customer.name} • ${customer.displayMobile}",
             fontSize = 14.sp,
             color = StudioSecondaryGray
         )
@@ -947,7 +947,7 @@ fun CustomerDetailsScreen(
                                         color = StudioDarkText
                                     )
                                     Text(
-                                        text = "📱 ${customer.mobile}",
+                                        text = "📱 ${customer.displayMobile}",
                                         fontSize = 14.sp,
                                         color = StudioSecondaryGray
                                     )

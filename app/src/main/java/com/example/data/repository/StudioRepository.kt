@@ -7,7 +7,9 @@ import com.example.data.model.CrewMember
 import com.example.data.model.Customer
 import com.example.data.model.EventBooking
 import com.example.data.model.StudioProfile
+import com.example.data.model.formatContactNumber
 import com.example.ui.strings.AppLanguage
+import com.example.receiver.AlarmScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
@@ -63,6 +65,10 @@ class StudioRepository(private val context: Context) {
         firestoreSync.syncAllFromCloud()
     }
 
+    suspend fun syncAllToCloud(): Result<Int> = withContext(Dispatchers.IO) {
+        firestoreSync.syncAllToCloud()
+    }
+
     suspend fun clearAllLocalData() = withContext(Dispatchers.IO) {
         customerDao.deleteAll()
         eventDao.deleteAll()
@@ -85,7 +91,14 @@ class StudioRepository(private val context: Context) {
     }
 
     suspend fun deleteCustomer(customer: Customer) = withContext(Dispatchers.IO) {
-        // Also remove events for this customer
+        try {
+            val customerEvents = eventDao.getEventsForCustomerSync(customer.id)
+            for (ev in customerEvents) {
+                AlarmScheduler.cancelAlarmForReminder(context, ev.id)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         eventDao.deleteEventsForCustomer(customer.id)
         customerDao.deleteCustomer(customer)
         firestoreSync.deleteCustomerFromCloud(customer.id)
@@ -106,6 +119,11 @@ class StudioRepository(private val context: Context) {
     }
 
     suspend fun deleteEvent(event: EventBooking) = withContext(Dispatchers.IO) {
+        try {
+            AlarmScheduler.cancelAlarmForReminder(context, event.id)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         eventDao.deleteEvent(event)
         firestoreSync.deleteEventFromCloud(event.id)
     }
@@ -174,6 +192,9 @@ class StudioRepository(private val context: Context) {
 
     companion object {
         fun normalizePhone(phone: String): String {
+            if (phone.contains("XXXXX")) {
+                return "+91 XXXXX XX444"
+            }
             val digits = phone.filter { it.isDigit() }
             return when {
                 digits.length == 10 -> digits
@@ -188,11 +209,23 @@ class StudioRepository(private val context: Context) {
     fun getStudioProfile(): StudioProfile {
         val savedStudioName = prefs.getString("studio_name", null)
         val savedOwnerName = prefs.getString("owner_name", null)
+        val savedMobile = prefs.getString("mobile_number", null)
+        val savedWhatsApp = prefs.getString("whatsapp_number", null)
+
+        val cleanMobile = when {
+            savedMobile == null || savedMobile.isBlank() || savedMobile.contains("98250") -> "+91 XXXXX XX444"
+            else -> savedMobile
+        }
+        val cleanWhatsApp = when {
+            savedWhatsApp == null || savedWhatsApp.isBlank() || savedWhatsApp.contains("98250") -> "+91 XXXXX XX444"
+            else -> savedWhatsApp
+        }
+
         return StudioProfile(
             studioName = savedStudioName ?: "Studio Management",
             ownerName = savedOwnerName ?: "Studio Owner",
-            mobileNumber = prefs.getString("mobile_number", "") ?: "",
-            whatsAppNumber = prefs.getString("whatsapp_number", "") ?: "",
+            mobileNumber = cleanMobile,
+            whatsAppNumber = cleanWhatsApp,
             address = prefs.getString("address", "") ?: "",
             logoUri = prefs.getString("logo_uri", "") ?: "",
             lastBackupTime = prefs.getLong("last_backup_time", 0L)
@@ -427,8 +460,8 @@ class StudioRepository(private val context: Context) {
                 val restoredProfile = StudioProfile(
                     studioName = profileObj.optString("studioName", "Maruti Photo Studio"),
                     ownerName = profileObj.optString("ownerName", "Kishorbhai Patel"),
-                    mobileNumber = profileObj.optString("mobileNumber", "9825012345"),
-                    whatsAppNumber = profileObj.optString("whatsAppNumber", "9825012345"),
+                    mobileNumber = profileObj.optString("mobileNumber", "+91 XXXXX XX444"),
+                    whatsAppNumber = profileObj.optString("whatsAppNumber", "+91 XXXXX XX444"),
                     address = profileObj.optString("address", "India"),
                     logoUri = profileObj.optString("logoUri", ""),
                     lastBackupTime = System.currentTimeMillis()
@@ -445,13 +478,16 @@ class StudioRepository(private val context: Context) {
     // Prepopulate realistic initial data if database is empty
     suspend fun prepopulateIfEmpty() = withContext(Dispatchers.IO) {
         val hasSampleInitialized = prefs.getBoolean("has_sample_initialized", false)
-        if (hasSampleInitialized) return@withContext
+        if (hasSampleInitialized) {
+            sanitizeAllSamplePhoneNumbers()
+            return@withContext
+        }
 
         // Crew
         val crew1Id = crewDao.insertCrew(
             CrewMember(
                 name = "Pravin Patel",
-                mobile = "9825123456",
+                mobile = "+91 XXXXX XX444",
                 role = "Photographer",
                 cameraEquipment = "Sony A7 IV, 24-70mm GM II",
                 note = "Lead Portrait & Candid Specialist"
@@ -460,7 +496,7 @@ class StudioRepository(private val context: Context) {
         val crew2Id = crewDao.insertCrew(
             CrewMember(
                 name = "Mahesh Gohil",
-                mobile = "9879012345",
+                mobile = "+91 XXXXX XX444",
                 role = "Videographer",
                 cameraEquipment = "Sony FX3, Ronin RS3 Pro",
                 note = "Cinematic video & Gimbal operator"
@@ -469,7 +505,7 @@ class StudioRepository(private val context: Context) {
         val crew3Id = crewDao.insertCrew(
             CrewMember(
                 name = "Dipen Shah",
-                mobile = "9723045678",
+                mobile = "+91 XXXXX XX444",
                 role = "Drone Pilot",
                 cameraEquipment = "DJI Mavic 3 Pro, DJI Avata",
                 note = "Aerial 4K coverage expert"
@@ -478,7 +514,7 @@ class StudioRepository(private val context: Context) {
         crewDao.insertCrew(
             CrewMember(
                 name = "Chetan Parmar",
-                mobile = "9909067890",
+                mobile = "+91 XXXXX XX444",
                 role = "Editor",
                 cameraEquipment = "Mac Studio M2 Max, Premiere & DaVinci",
                 note = "Album design & video colorist"
@@ -489,14 +525,14 @@ class StudioRepository(private val context: Context) {
         val custId1 = customerDao.insertCustomer(
             Customer(
                 name = "Rajesh Patel",
-                mobile = "9824055511",
+                mobile = "+91 XXXXX XX444",
                 note = "Royal Party Plot booking, sister's wedding celebrations"
             )
         )
         val custId2 = customerDao.insertCustomer(
             Customer(
                 name = "Sanjaybhai Vaghani",
-                mobile = "9898033221",
+                mobile = "+91 XXXXX XX444",
                 note = "Daughter's reception at Sarthana Convention Hall"
             )
         )
@@ -516,7 +552,7 @@ class StudioRepository(private val context: Context) {
             EventBooking(
                 customerId = custId1,
                 customerName = "Rajesh Patel",
-                customerMobile = "9824055511",
+                customerMobile = "+91 XXXXX XX444",
                 eventName = "Haldi",
                 eventDate = date1,
                 eventDateMillis = date1Millis,
@@ -535,7 +571,7 @@ class StudioRepository(private val context: Context) {
             EventBooking(
                 customerId = custId1,
                 customerName = "Rajesh Patel",
-                customerMobile = "9824055511",
+                customerMobile = "+91 XXXXX XX444",
                 eventName = "Wedding",
                 eventDate = date2,
                 eventDateMillis = date2Millis,
@@ -555,7 +591,7 @@ class StudioRepository(private val context: Context) {
             EventBooking(
                 customerId = custId2,
                 customerName = "Sanjaybhai Vaghani",
-                customerMobile = "9898033221",
+                customerMobile = "+91 XXXXX XX444",
                 eventName = "Reception",
                 eventDate = date2,
                 eventDateMillis = date2Millis,
@@ -571,6 +607,35 @@ class StudioRepository(private val context: Context) {
         )
 
         prefs.edit().putBoolean("has_sample_initialized", true).apply()
+        sanitizeAllSamplePhoneNumbers()
+    }
+
+    suspend fun sanitizeAllSamplePhoneNumbers() = withContext(Dispatchers.IO) {
+        try {
+            val customers = customerDao.getAllCustomersSync()
+            for (c in customers) {
+                val formatted = formatContactNumber(c.mobile)
+                if (formatted != c.mobile) {
+                    customerDao.updateCustomer(c.copy(mobile = formatted))
+                }
+            }
+            val crew = crewDao.getAllCrewSync()
+            for (cr in crew) {
+                val formatted = formatContactNumber(cr.mobile)
+                if (formatted != cr.mobile) {
+                    crewDao.updateCrew(cr.copy(mobile = formatted))
+                }
+            }
+            val events = eventDao.getAllEventsSync()
+            for (ev in events) {
+                val formatted = formatContactNumber(ev.customerMobile)
+                if (formatted != ev.customerMobile) {
+                    eventDao.updateEvent(ev.copy(customerMobile = formatted))
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun isShowCustomerPhoneInWhatsApp(): Boolean {

@@ -77,6 +77,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         com.example.util.AdMobManager.initialize(applicationContext)
 
+        if (intent?.getBooleanExtra("stop_alarm", false) == true || intent?.hasExtra("open_event_id") == true) {
+            com.example.receiver.AlarmReceiver.stopAlarm(this, intent.getLongExtra("open_event_id", -1L))
+        }
+
         setContent {
             val currentLang by viewModel.language.collectAsState()
 
@@ -116,6 +120,14 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra("stop_alarm", false) || intent.hasExtra("open_event_id")) {
+            com.example.receiver.AlarmReceiver.stopAlarm(this, intent.getLongExtra("open_event_id", -1L))
         }
     }
 }
@@ -202,10 +214,12 @@ fun MarutiAppContent(
                     SplashScreen(
                         strings = strings,
                         onSplashFinished = {
-                            if (viewModel.currentUser.value == null) {
-                                viewModel.navigateTo(Screen.SignIn, clearStack = true)
-                            } else {
+                            val authPrefs = context.getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+                            val hasLocalSession = authPrefs.getString("local_session", null) == "active"
+                            if (viewModel.currentUser.value != null || hasLocalSession) {
                                 viewModel.navigateTo(Screen.Home, clearStack = true)
+                            } else {
+                                viewModel.navigateTo(Screen.SignIn, clearStack = true)
                             }
                         }
                     )
@@ -216,6 +230,9 @@ fun MarutiAppContent(
                         authManager = viewModel.authManager,
                         onSignInSuccess = {
                             viewModel.onUserSignedIn()
+                        },
+                        onContinueAsGuest = {
+                            viewModel.continueAsGuest()
                         },
                         onBack = null
                     )

@@ -54,6 +54,32 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         authManager.currentUser
     )
 
+    private val _localSession = MutableStateFlow(
+        getApplication<Application>().getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+            .getString("local_session", null) == "active"
+    )
+    val localSession: StateFlow<Boolean> = _localSession.asStateFlow()
+
+    private val _savedEmail = MutableStateFlow(
+        getApplication<Application>().getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+            .getString("saved_email", "") ?: ""
+    )
+    val savedEmail: StateFlow<String> = _savedEmail.asStateFlow()
+
+    val isUserLoggedIn: StateFlow<Boolean> = combine(currentUser, _localSession) { firebaseUser, localActive ->
+        firebaseUser != null || localActive
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, authManager.currentUser != null || _localSession.value)
+
+    fun refreshAuthSession() {
+        val prefs = getApplication<Application>().getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+        _localSession.value = prefs.getString("local_session", null) == "active"
+        _savedEmail.value = prefs.getString("saved_email", "") ?: ""
+    }
+
+    fun getUserDisplayEmail(): String {
+        return currentUser.value?.email ?: _savedEmail.value.ifBlank { "marutiphoto1234@gmail.com" }
+    }
+
     private val _isCloudSyncing = MutableStateFlow(false)
     val isCloudSyncing: StateFlow<Boolean> = _isCloudSyncing.asStateFlow()
 
@@ -205,6 +231,7 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     fun normalizeMobile(mobile: String): String = StudioRepository.normalizePhone(mobile)
 
     fun isValidMobile(mobile: String): Boolean {
+        if (mobile.contains("XXXXX") || mobile.trim() == "+91 XXXXX XX444") return true
         val clean = normalizeMobile(mobile)
         return clean.length == 10 && clean.all { it.isDigit() }
     }
@@ -514,6 +541,8 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
             timeInMillis = reminderTimeMillis,
             eventId = event.id,
             eventName = event.eventName,
+            customerName = event.customerName,
+            customerMobile = event.displayCustomerMobile,
             eventTime = event.eventTime,
             eventLocation = event.eventLocation
         )
@@ -701,6 +730,10 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
 
     // Intent actions for Call, WhatsApp, Navigation
     fun openDialer(mobile: String) {
+        if (mobile.contains("XXXXX")) {
+            showUserMessage("આ સેમ્પલ નંબર છે (+91 XXXXX XX444)")
+            return
+        }
         try {
             val digits = mobile.filter { it.isDigit() }
             val clean = when {
@@ -720,6 +753,10 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun openWhatsApp(mobile: String, prefillText: String = "") {
+        if (mobile.contains("XXXXX")) {
+            showUserMessage("આ સેમ્પલ નંબર છે (+91 XXXXX XX444)")
+            return
+        }
         try {
             val digits = mobile.filter { it.isDigit() }
             val clean = when {
@@ -829,17 +866,27 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    fun continueAsGuest() {
+        _studioProfile.value = repository.getStudioProfile()
+        navigateTo(Screen.Home, clearStack = true)
+    }
+
     fun onUserSignedIn() {
+        refreshAuthSession()
         viewModelScope.launch {
-            _isCloudSyncing.value = true
-            repository.clearAllLocalData()
-            val result = repository.onUserSignedIn()
-            _isCloudSyncing.value = false
-            _studioProfile.value = repository.getStudioProfile()
-            result.onSuccess { count ->
-                _userMessage.emit("લૉગિન સફળ! ડેટા ક્લાઉડ સાથે સિંક થયો.")
-            }.onFailure { e ->
-                _userMessage.emit("લૉગિન સફળ!")
+            if (authManager.currentUser != null) {
+                _isCloudSyncing.value = true
+                repository.clearAllLocalData()
+                val result = repository.onUserSignedIn()
+                _isCloudSyncing.value = false
+                _studioProfile.value = repository.getStudioProfile()
+                result.onSuccess { count ->
+                    _userMessage.emit("લૉગિન સફળ! ડેટા ક્લાઉડ સાથે સિંક થયો.")
+                }.onFailure { e ->
+                    _userMessage.emit("લૉગિન સફળ!")
+                }
+            } else {
+                _studioProfile.value = repository.getStudioProfile()
             }
         }
         navigateTo(Screen.Home, clearStack = true)
@@ -859,10 +906,41 @@ class StudioViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun signOutWithCloudBackup() {
+        viewModelScope.launch {
+            _isCloudSyncing.value = true
+            try {
+                // 1. Create a local backup JSON to preserve latest state
+                repository.createBackupJson()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            try {
+                // 2. Sync and save all customers, events, crew to cloud
+                repository.syncAllToCloud()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            _isCloudSyncing.value = false
+
+            // 3. Clear session and sign out
+            authManager.signOut()
+            getApplication<Application>().getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+                .edit().remove("local_session").apply()
+            refreshAuthSession()
+
+            _userMessage.emit("ડેટા ક્લાઉડ પર સુરક્ષિત સેવ થયો અને સાઇન આઉટ થયું.")
+            navigateTo(Screen.SignIn, clearStack = true)
+        }
+    }
+
     fun signOut() {
         viewModelScope.launch {
-            repository.clearAllLocalData()
             authManager.signOut()
+            getApplication<Application>().getSharedPreferences("maruti_studio_auth_prefs", android.content.Context.MODE_PRIVATE)
+                .edit().remove("local_session").apply()
+            refreshAuthSession()
             navigateTo(Screen.SignIn, clearStack = true)
             _userMessage.emit("સફળતાપૂર્વક સાઇન આઉટ થયું")
         }

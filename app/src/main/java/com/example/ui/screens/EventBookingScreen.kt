@@ -996,7 +996,7 @@ fun CustomerSelectorCard(
                             text = {
                                 Column {
                                     Text(customer.name, fontWeight = FontWeight.SemiBold, color = StudioDarkText)
-                                    Text("📱 ${customer.mobile}", fontSize = 12.sp, color = StudioSecondaryGray)
+                                    Text("📱 ${customer.displayMobile}", fontSize = 12.sp, color = StudioSecondaryGray)
                                 }
                             },
                             onClick = {
@@ -1157,7 +1157,7 @@ fun CrewPickerModal(
                                         color = StudioDarkText
                                     )
                                     Text(
-                                        text = "${crew.role} • ${crew.mobile}",
+                                        text = "${crew.role} • ${crew.displayMobile}",
                                         fontSize = 12.sp,
                                         color = StudioSecondaryGray
                                     )

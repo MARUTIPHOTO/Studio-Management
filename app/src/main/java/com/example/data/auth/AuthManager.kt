@@ -92,7 +92,7 @@ class AuthManager(private val context: Context) {
      * Sign in with Email and Password
      */
     suspend fun signInWithEmailAndPassword(email: String, pass: String): Result<FirebaseUser> {
-        val cleanEmail = email.trim()
+        val cleanEmail = email.trim().lowercase()
         val cleanPass = pass.trim()
         if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
             return Result.failure(Exception("કૃપા કરીને માન્ય ઈમેલ સરનામું દાખલ કરો."))
@@ -108,30 +108,25 @@ class AuthManager(private val context: Context) {
             } else {
                 Result.failure(Exception("વપરાશકર્તા વિગતો મેળવી શકાઈ નથી."))
             }
-        } catch (e: FirebaseAuthInvalidUserException) {
-            Result.failure(Exception("આ ઈમેલ સાથે કોઈ એકાઉન્ટ મળ્યું નથી. કૃપા કરીને 'નવું ખાતું બનાવો' પર ક્લિક કરો."))
-        } catch (e: FirebaseAuthInvalidCredentialsException) {
-            Result.failure(Exception("ઈમેલ અથવા પાસવર્ડ ખોટો છે."))
-        } catch (e: FirebaseAuthException) {
-            val msg = e.message ?: ""
-            val code = e.errorCode
-            if (code == "ERROR_OPERATION_NOT_ALLOWED" ||
-                msg.contains("operation is not allowed", ignoreCase = true) ||
-                msg.contains("disabled", ignoreCase = true)
-            ) {
-                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
-            } else {
-                Result.failure(Exception("લૉગિનમાં ત્રુટિ: ${e.localizedMessage ?: e.message}"))
-            }
         } catch (e: Exception) {
             val msg = e.localizedMessage ?: e.message ?: ""
             if (msg.contains("operation is not allowed", ignoreCase = true) ||
-                msg.contains("disabled", ignoreCase = true)
+                msg.contains("disabled", ignoreCase = true) ||
+                (e is FirebaseAuthException && e.errorCode == "ERROR_OPERATION_NOT_ALLOWED")
             ) {
-                Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
-            } else {
-                Result.failure(Exception(msg.ifBlank { "લૉગિન નિષ્ફળ ગયું." }))
+                return Result.failure(Exception("⚠️ આ Firebase પ્રોજેક્ટમાં Email/Password સેવા બંધ છે. કૃપા કરીને 'Google દ્વારા સાઇન ઇન કરો' (Google Sign-In) વાપરો, જે ૧-ક્લિકમાં ૧૦૦% કાર્યરત છે."))
             }
+
+            if (e is FirebaseAuthInvalidUserException ||
+                e is FirebaseAuthInvalidCredentialsException ||
+                msg.contains("malformed", ignoreCase = true) ||
+                msg.contains("expired", ignoreCase = true) ||
+                msg.contains("incorrect", ignoreCase = true)
+            ) {
+                return Result.failure(Exception("ઈમેલ અથવા પાસવર્ડ મેળ ખાતો નથી. કૃપા કરીને પાસવર્ડ ચકાસો અથવા નીચે 'પાસવર્ડ ભૂલી ગયા?' પર ક્લિક કરી રીસેટ કરો."))
+            }
+
+            Result.failure(Exception(msg.ifBlank { "લૉગિન નિષ્ફળ ગયું. કૃપા કરીને ફરી પ્રયાસ કરો." }))
         }
     }
 
@@ -139,7 +134,7 @@ class AuthManager(private val context: Context) {
      * Create new user with Email and Password
      */
     suspend fun createUserWithEmailAndPassword(email: String, pass: String): Result<FirebaseUser> {
-        val cleanEmail = email.trim()
+        val cleanEmail = email.trim().lowercase()
         val cleanPass = pass.trim()
         if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
             return Result.failure(Exception("કૃપા કરીને માન્ય ઈમેલ સરનામું દાખલ કરો."))
@@ -188,7 +183,7 @@ class AuthManager(private val context: Context) {
      * Send Password Reset Email
      */
     suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
-        val cleanEmail = email.trim()
+        val cleanEmail = email.trim().lowercase()
         if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
             return Result.failure(Exception("પાસવર્ડ રીસેટ કરવા માન્ય ઈમેલ દાખલ કરો."))
         }

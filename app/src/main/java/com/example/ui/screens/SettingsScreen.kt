@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Language
@@ -135,11 +136,6 @@ fun SettingsScreen(
     val currentLang by viewModel.language.collectAsState()
     val strings = remember(currentLang) { com.example.ui.strings.AppStrings.get(currentLang) }
     val profile by viewModel.studioProfile.collectAsState()
-    val isAdMobBannerEnabled by viewModel.isAdMobBannerEnabled.collectAsState()
-    val isAdMobTestMode by viewModel.isAdMobTestMode.collectAsState()
-    val bannerAdUnitId by viewModel.bannerAdUnitId.collectAsState()
-    val interstitialAdUnitId by viewModel.interstitialAdUnitId.collectAsState()
-    val isInterstitialAdEnabled by viewModel.isInterstitialAdEnabled.collectAsState()
     val context = LocalContext.current
 
     var studioName by remember(profile.studioName) { mutableStateOf(profile.studioName) }
@@ -234,11 +230,10 @@ fun SettingsScreen(
         }
     }
 
-    var showRestoreConfirm by remember { mutableStateOf(false) }
-    var backupStatusMsg by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val currentUser by viewModel.currentUser.collectAsState()
+    val isUserLoggedIn by viewModel.isUserLoggedIn.collectAsState()
     val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
 
 
@@ -418,9 +413,10 @@ fun SettingsScreen(
                             StudioInputField(
                                 value = mobileNumber,
                                 onValueChange = {
-                                    mobileNumber = it
-                                    showSaveSuccessBanner = false
+                                     mobileNumber = it
+                                     showSaveSuccessBanner = false
                                 },
+                                placeholder = "+91 XXXXX XX444",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -434,9 +430,10 @@ fun SettingsScreen(
                             StudioInputField(
                                 value = whatsAppNumber,
                                 onValueChange = {
-                                    whatsAppNumber = it
-                                    showSaveSuccessBanner = false
+                                     whatsAppNumber = it
+                                     showSaveSuccessBanner = false
                                 },
+                                placeholder = "+91 XXXXX XX444",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -587,96 +584,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Section 3: Data (Backup / Restore) - SCREEN 17
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioLightBorder)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Backup, contentDescription = null, tint = StudioRedPrimary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = strings.dataHeader,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StudioDarkText
-                            )
-                        }
-
-                        val lastBackupText = if (profile.lastBackupTime > 0) {
-                            val sdf = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.ENGLISH)
-                            sdf.format(Date(profile.lastBackupTime))
-                        } else {
-                            strings.neverBackedUp
-                        }
-
-                        Text(
-                            text = "${strings.lastBackupLabel} $lastBackupText",
-                            fontSize = 13.sp,
-                            color = StudioSecondaryGray
-                        )
-
-                        if (backupStatusMsg != null) {
-                            Text(
-                                text = backupStatusMsg!!,
-                                fontSize = 12.sp,
-                                color = StudioGreenDark,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Backup Data Button
-                            Button(
-                                onClick = {
-                                    viewModel.backupData {
-                                        backupStatusMsg = "Backup created successfully!"
-                                    }
-                                },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .testTag("backup_data_btn"),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = StudioRedPrimary)
-                            ) {
-                                Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(strings.backupDataBtn, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            // Restore Data Button
-                            OutlinedButton(
-                                onClick = { showRestoreConfirm = true },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(44.dp)
-                                    .testTag("restore_data_btn"),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = StudioDarkText)
-                            ) {
-                                Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(strings.restoreDataBtn, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Section 4: Cloud Account & Firestore Cloud Sync
+            // Section: Cloud Account
             item {
                 Card(
                     modifier = Modifier
@@ -705,7 +613,11 @@ fun SettingsScreen(
                             )
                         }
 
-                        if (currentUser != null) {
+                        if (isUserLoggedIn) {
+                            val displayEmail = viewModel.getUserDisplayEmail()
+                            val initial = (currentUser?.displayName?.take(1) ?: displayEmail.take(1).ifBlank { "M" }).uppercase()
+                            val displayName = currentUser?.displayName ?: "Studio Owner"
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -722,7 +634,7 @@ fun SettingsScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = (currentUser?.displayName?.take(1) ?: currentUser?.email?.take(1) ?: "U").uppercase(),
+                                        text = initial,
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 18.sp
@@ -731,13 +643,13 @@ fun SettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = currentUser?.displayName ?: "Studio Owner",
+                                        text = displayName,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp,
                                         color = StudioDarkText
                                     )
                                     Text(
-                                        text = currentUser?.email ?: "",
+                                        text = displayEmail,
                                         fontSize = 12.sp,
                                         color = StudioSecondaryGray
                                     )
@@ -753,7 +665,7 @@ fun SettingsScreen(
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
-                                            text = "Firestore સિંક સક્રિય (Cloud Sync Active)",
+                                            text = "ક્લાઉડ સિંક સક્રિય (Cloud Sync Active)",
                                             fontSize = 11.sp,
                                             color = StudioGreenDark,
                                             fontWeight = FontWeight.Medium
@@ -762,45 +674,36 @@ fun SettingsScreen(
                                 }
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Button(
+                                onClick = { viewModel.signOutWithCloudBackup() },
+                                enabled = !isCloudSyncing,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("sign_out_with_backup_btn"),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = StudioRedPrimary)
                             ) {
-                                Button(
-                                    onClick = { viewModel.syncFromCloud() },
-                                    enabled = !isCloudSyncing,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp)
-                                        .testTag("sync_cloud_now_btn"),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = StudioGreenDark)
-                                ) {
-                                    if (isCloudSyncing) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(16.dp),
-                                            color = Color.White,
-                                            strokeWidth = 2.dp
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("સિંક...", fontSize = 13.sp)
-                                    } else {
-                                        Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("હમણાં સિંક કરો", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                OutlinedButton(
-                                    onClick = { viewModel.signOut() },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp)
-                                        .testTag("sign_out_btn"),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = StudioRedPrimary)
-                                ) {
-                                    Text("સાઇન આઉટ", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = StudioRedPrimary)
+                                if (isCloudSyncing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(strings.cloudSyncingAndLogout, fontSize = 13.sp)
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudUpload,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = strings.logoutWithBackupBtn,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         } else {
@@ -817,7 +720,7 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = StudioRedPrimary)
                             ) {
-                                Text("Google દ્વારા સાઇન ઇન કરો", fontWeight = FontWeight.Bold)
+                                Text("લૉગિન / સાઇન ઇન કરો", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -895,369 +798,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Section 5: Google AdMob Settings & Live Banner Preview
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("admob_settings_card"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioLightBorder)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Campaign,
-                                    contentDescription = null,
-                                    tint = StudioRedPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = strings.admobSettingsHeader,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StudioDarkText
-                                    )
-                                    Text(
-                                        text = strings.admobSettingsSub,
-                                        fontSize = 11.sp,
-                                        color = StudioSecondaryGray
-                                    )
-                                }
-                            }
-
-                            // Active badge
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(StudioGreenLight)
-                                    .padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Text(
-                                    text = if (isAdMobBannerEnabled) "Active" else "Disabled",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isAdMobBannerEnabled) StudioGreenDark else StudioSecondaryGray
-                                )
-                            }
-                        }
-
-                        // Status Badge Row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isAdMobTestMode) StudioGreenLight else Color(0xFFE8F0FE))
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = if (isAdMobTestMode) "ટેસ્ટ મોડ સક્રિય (Test Mode Active)" else "લાઇવ મોડ સક્રિય (Live Play Store Mode)",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isAdMobTestMode) StudioGreenDark else Color(0xFF1967D2)
-                                )
-                                Text(
-                                    text = if (isAdMobTestMode) strings.admobTestModeActiveDesc else strings.admobLiveModeActiveDesc,
-                                    fontSize = 10.sp,
-                                    color = StudioDarkText,
-                                    lineHeight = 14.sp
-                                )
-                            }
-                        }
-
-                        // Toggle 1: Test Mode vs Live Mode
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(StudioSurfaceVariant)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = strings.admobTestModeToggleLabel,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = StudioDarkText
-                                )
-                                Text(
-                                    text = if (isAdMobTestMode) "ચાલુ: Google Test Ads (ખાતું સુરક્ષિત)" else "બંધ: ઓરિજિનલ AdMob કી સક્રિય",
-                                    fontSize = 11.sp,
-                                    color = if (isAdMobTestMode) StudioGreenDark else StudioRedPrimary
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Switch(
-                                checked = isAdMobTestMode,
-                                onCheckedChange = { checked ->
-                                    viewModel.setAdMobTestMode(checked)
-                                    val msg = if (checked) "AdMob ટેસ્ટ મોડ ચાલુ કર્યો (Safe Test Mode)" else "AdMob લાઇવ મોડ ચાલુ કર્યો (Play Store Mode)"
-                                    viewModel.showUserMessage(msg)
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = StudioGreenDark,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = Color.LightGray
-                                ),
-                                modifier = Modifier.testTag("admob_test_mode_switch")
-                            )
-                        }
-
-                        // Toggle 2: Banner Ads
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(StudioSurfaceVariant)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = strings.admobBannerToggleLabel,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = StudioDarkText
-                                )
-                                Text(
-                                    text = if (isAdMobBannerEnabled) "બેનર જાહેરાત ચાલુ છે" else "બેનર જાહેરાત બંધ છે",
-                                    fontSize = 11.sp,
-                                    color = if (isAdMobBannerEnabled) StudioGreenDark else StudioSecondaryGray
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Switch(
-                                checked = isAdMobBannerEnabled,
-                                onCheckedChange = { checked ->
-                                    viewModel.setAdMobBannerEnabled(checked)
-                                    val msg = if (checked) "AdMob બેનર ચાલુ કર્યું" else "AdMob બેનર બંધ કર્યું"
-                                    viewModel.showUserMessage(msg)
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = StudioRedPrimary,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = Color.LightGray
-                                ),
-                                modifier = Modifier.testTag("admob_banner_toggle_switch")
-                            )
-                        }
-
-                        // Toggle 3: Interstitial Ads
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(StudioSurfaceVariant)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "ઇન્ટર્સ્ટિશિયલ એડ્સ (Fullscreen Ads)",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = StudioDarkText
-                                )
-                                Text(
-                                    text = if (isInterstitialAdEnabled) "ઇન્ટર્સ્ટિશિયલ એડ્સ સક્રિય છે" else "ઇન્ટર્સ્ટિશિયલ એડ્સ નિષ્ક્રિય છે",
-                                    fontSize = 11.sp,
-                                    color = if (isInterstitialAdEnabled) StudioGreenDark else StudioSecondaryGray
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Switch(
-                                checked = isInterstitialAdEnabled,
-                                onCheckedChange = { checked ->
-                                    viewModel.setInterstitialAdEnabled(checked)
-                                    val msg = if (checked) "ઇન્ટર્સ્ટિશિયલ એડ્સ ચાલુ કરી" else "ઇન્ટર્સ્ટિશિયલ એડ્સ બંધ કરી"
-                                    viewModel.showUserMessage(msg)
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = StudioRedPrimary,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = Color.LightGray
-                                ),
-                                modifier = Modifier.testTag("admob_interstitial_toggle_switch")
-                            )
-                        }
-
-                        // Ad Unit IDs Display Card
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFFAFAFA))
-                                .border(0.5.dp, StudioLightBorder, RoundedCornerShape(8.dp))
-                                .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Banner ID
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = strings.admobBannerAdUnitLabel,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StudioDarkText
-                                    )
-                                    Text(
-                                        text = if (isAdMobTestMode) "ટેસ્ટ ID: ${com.example.util.AdMobConfig.TEST_BANNER_ID}" else "લાઇવ ID: $bannerAdUnitId",
-                                        fontSize = 10.sp,
-                                        color = if (isAdMobTestMode) StudioSecondaryGray else StudioRedPrimary
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("Banner Ad Unit ID", bannerAdUnitId)
-                                        clipboard?.setPrimaryClip(clip)
-                                        Toast.makeText(context, "બેનર ID કોપી થઈ ગયું!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Banner ID", modifier = Modifier.size(16.dp))
-                                }
-                            }
-
-                            // Interstitial ID
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = strings.admobInterstitialAdUnitLabel,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = StudioDarkText
-                                    )
-                                    Text(
-                                        text = if (isAdMobTestMode) "ટેસ્ટ ID: ${com.example.util.AdMobConfig.TEST_INTERSTITIAL_ID}" else "લાઇવ ID: $interstitialAdUnitId",
-                                        fontSize = 10.sp,
-                                        color = if (isAdMobTestMode) StudioSecondaryGray else StudioRedPrimary
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("Interstitial Ad Unit ID", interstitialAdUnitId)
-                                        clipboard?.setPrimaryClip(clip)
-                                        Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ ID કોપી થઈ ગયું!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy Interstitial ID", modifier = Modifier.size(16.dp))
-                                }
-                            }
-
-                            // App ID
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = strings.admobAppIdLabel,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = StudioDarkText
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "ca-app-pub-3231614216500760~...",
-                                    fontSize = 10.sp,
-                                    color = StudioSecondaryGray
-                                )
-                            }
-                        }
-
-                        // Test Interstitial Ad Action Button
-                        OutlinedButton(
-                            onClick = {
-                                val act = context.findActivity()
-                                if (act != null) {
-                                    Toast.makeText(context, strings.admobInterstitialShownToast, Toast.LENGTH_SHORT).show()
-                                    viewModel.showInterstitialAd(act) {
-                                        Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ એડ પૂર્ણ થઈ!", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "ઇન્ટર્સ્ટિશિયલ એડ લોડ થઈ રહી છે...", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .testTag("test_interstitial_ad_button"),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(Icons.Default.Campaign, contentDescription = null, tint = StudioRedPrimary, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = strings.admobShowInterstitialTestBtn,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StudioRedPrimary
-                            )
-                        }
-
-                        // Live AdMob Banner Preview
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = strings.admobLivePreviewLabel,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StudioDarkText
-                            )
-
-                            val previewBannerId = remember(isAdMobTestMode, bannerAdUnitId) {
-                                viewModel.getEffectiveBannerAdUnitId()
-                            }
-
-                            AdMobBanner(
-                                adUnitId = previewBannerId,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(6.dp))
-                            )
-                        }
-
-                        // Policy note
-                        Text(
-                            text = strings.admobPolicyNote,
-                            fontSize = 11.sp,
-                            color = StudioSecondaryGray,
-                            lineHeight = 15.sp
-                        )
-                    }
-                }
-            }
-
-            // Section 6: Privacy Policy Card (પ્રાઈવસી પોલિસી)
+            // Section: Privacy Policy Card (પ્રાઈવસી પોલિસી)
             item {
                 Card(
                     modifier = Modifier
@@ -1317,23 +858,6 @@ fun SettingsScreen(
     }
 }
 
-    // Restore Confirmation Dialog (SCREEN 17)
-    if (showRestoreConfirm) {
-        SimpleConfirmationDialog(
-            title = "Restore Data Confirmation",
-            message = strings.restoreConfirmationMsg,
-            confirmText = strings.restoreBtn,
-            cancelText = strings.cancelBtn,
-            onConfirm = {
-                viewModel.restoreData { success ->
-                    backupStatusMsg = if (success) "Data successfully restored!" else "No backup snapshot found."
-                }
-                showRestoreConfirm = false
-            },
-            onDismiss = { showRestoreConfirm = false },
-            isDestructive = false
-        )
-    }
 }
 
 private fun android.content.Context.findActivity(): Activity? {

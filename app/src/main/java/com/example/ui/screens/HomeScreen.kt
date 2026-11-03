@@ -101,6 +101,7 @@ fun HomeScreen(
         viewModel.getEffectiveBannerAdUnitId()
     }
     val currentUser by viewModel.currentUser.collectAsState()
+    val isUserLoggedIn by viewModel.isUserLoggedIn.collectAsState()
     val isCloudSyncing by viewModel.isCloudSyncing.collectAsState()
     val subscriptionState by viewModel.subscriptionState.collectAsState()
     var showSubscriptionDialog by remember { mutableStateOf(false) }
@@ -149,7 +150,7 @@ fun HomeScreen(
             // Firebase Login / Cloud Status Banner
             item {
                 Spacer(modifier = Modifier.height(10.dp))
-                if (currentUser == null) {
+                if (!isUserLoggedIn) {
                     Card(
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED)),
@@ -228,7 +229,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Firebase સિંક સક્રિય: ${currentUser?.displayName ?: currentUser?.email ?: "Studio"}",
+                                    text = "સ્ટુડિયો એકાઉન્ટ સક્રિય: ${viewModel.getUserDisplayEmail()}",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color(0xFF1B5E20),
@@ -540,7 +541,7 @@ fun CustomerCard(
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "📱 ${customer.mobile}",
+                                text = "📱 ${customer.displayMobile}",
                                 fontSize = 13.sp,
                                 color = StudioSecondaryGray,
                                 fontWeight = FontWeight.Medium

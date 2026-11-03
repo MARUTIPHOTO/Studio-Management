@@ -213,7 +213,15 @@ data class StringsDefinition(
     val trialDaysRemainingLabel: String,
     val referralSuccessMsg: String,
     val codeAppliedMsg: String,
-    val unlockToSendBtn: String
+    val unlockToSendBtn: String,
+    val logoutWithBackupBtn: String = "Logout with Cloud Data Backup",
+    val cloudSyncingAndLogout: String = "Backing up to cloud & signing out...",
+    val alarmNotificationTitle: String = "⏰ Event Alarm",
+    val alarmStopAction: String = "🛑 Stop Alarm",
+    val alarmCustomerPrefix: String = "Customer",
+    val alarmMobilePrefix: String = "Mobile",
+    val alarmTimePrefix: String = "Time",
+    val alarmLocationPrefix: String = "Location"
 )
 
 object AppStrings {
@@ -248,7 +256,7 @@ object AppStrings {
         customerNameLabel = "ગ્રાહકનું નામ *",
         customerNameHint = "ગ્રાહકનું નામ લખો",
         mobileNumberLabel = "મોબાઈલ નંબર *",
-        mobileNumberHint = "મોબાઈલ નંબર દાખલ કરો",
+        mobileNumberHint = "દા.ત. +91 XXXXX XX444",
         noteLabel = "નોંધ (વૈકલ્પિક)",
         noteHint = "વિશેષ નોંધ લખો...",
         saveCustomerBtn = "ગ્રાહક સેવ કરો",
@@ -401,7 +409,15 @@ object AppStrings {
         trialDaysRemainingLabel = "ટ્રાયલના %d દિવસ બાકી",
         referralSuccessMsg = "અભિનંદન! તમારું ૧ વર્ષનું ફ્રી સબસ્ક્રિપ્શન અનલૉક થઈ ગયું છે! 🎉",
         codeAppliedMsg = "રેફરલ કોડ સફળતાપૂર્વક લાગુ થયો!",
-        unlockToSendBtn = "Unlock to Send 📲"
+        unlockToSendBtn = "Unlock to Send 📲",
+        logoutWithBackupBtn = "સાઇન આઉટ & ક્લાઉડ ડેટા બેકઅપ",
+        cloudSyncingAndLogout = "ક્લાઉડ બેકઅપ & સાઇન આઉટ થઈ રહ્યું છે...",
+        alarmNotificationTitle = "⏰ ઇવેન્ટ એલાર્મ",
+        alarmStopAction = "🛑 એલાર્મ બંધ કરો",
+        alarmCustomerPrefix = "ગ્રાહક",
+        alarmMobilePrefix = "મોબાઈલ",
+        alarmTimePrefix = "સમય",
+        alarmLocationPrefix = "સ્થળ"
     )
 
     val Hindi = StringsDefinition(
@@ -435,7 +451,7 @@ object AppStrings {
         customerNameLabel = "ग्राहक का नाम *",
         customerNameHint = "ग्राहक का नाम दर्ज करें",
         mobileNumberLabel = "मोबाइल नंबर *",
-        mobileNumberHint = "10 अंकों का मोबाइल नंबर",
+        mobileNumberHint = "जैसे +91 XXXXX XX444",
         noteLabel = "नोट (वैकल्पिक)",
         noteHint = "कोई विशेष विवरण जोड़ें...",
         saveCustomerBtn = "ग्राहक सहेजें",
@@ -588,7 +604,15 @@ object AppStrings {
         trialDaysRemainingLabel = "ट्रायल के %d दिन बाकी",
         referralSuccessMsg = "बधाई हो! आपका १ साल का फ्री सब्सक्रिप्शन अनलॉक हो गया है! 🎉",
         codeAppliedMsg = "रेफरल कोड सफलतापूर्वक लागू हुआ!",
-        unlockToSendBtn = "Unlock to Send 📲"
+        unlockToSendBtn = "Unlock to Send 📲",
+        logoutWithBackupBtn = "लॉगआउट & क्लाउड डेटा बैकअप",
+        cloudSyncingAndLogout = "क्लाउड बैकअप & लॉगआउट हो रहा है...",
+        alarmNotificationTitle = "⏰ इवेंट अलार्म",
+        alarmStopAction = "🛑 अलार्म बंद करें",
+        alarmCustomerPrefix = "ग्राहक",
+        alarmMobilePrefix = "मोबाइल",
+        alarmTimePrefix = "समय",
+        alarmLocationPrefix = "स्थान"
     )
 
     val English = StringsDefinition(
@@ -622,7 +646,7 @@ object AppStrings {
         customerNameLabel = "Customer Name *",
         customerNameHint = "Enter customer name",
         mobileNumberLabel = "Mobile Number *",
-        mobileNumberHint = "Enter mobile number",
+        mobileNumberHint = "e.g. +91 XXXXX XX444",
         noteLabel = "Note (Optional)",
         noteHint = "Add a note...",
         saveCustomerBtn = "Save Customer",
@@ -775,7 +799,15 @@ object AppStrings {
         trialDaysRemainingLabel = "%d Days Trial Remaining",
         referralSuccessMsg = "Congratulations! Your 1-Year Free Subscription is unlocked! 🎉",
         codeAppliedMsg = "Referral code applied successfully!",
-        unlockToSendBtn = "Unlock to Send 📲"
+        unlockToSendBtn = "Unlock to Send 📲",
+        logoutWithBackupBtn = "Logout with Cloud Data Backup",
+        cloudSyncingAndLogout = "Backing up to cloud & signing out...",
+        alarmNotificationTitle = "⏰ Event Alarm",
+        alarmStopAction = "🛑 Stop Alarm",
+        alarmCustomerPrefix = "Customer",
+        alarmMobilePrefix = "Mobile",
+        alarmTimePrefix = "Time",
+        alarmLocationPrefix = "Location"
     )
 
     fun get(language: AppLanguage): StringsDefinition {

@@ -18,6 +18,7 @@ object AlarmScheduler {
         eventId: Long = System.currentTimeMillis(),
         eventName: String = "Photography Event",
         customerName: String = "",
+        customerMobile: String = "",
         eventTime: String = "",
         eventLocation: String = ""
     ) {
@@ -33,6 +34,7 @@ object AlarmScheduler {
             putExtra(AlarmReceiver.EXTRA_EVENT_ID, eventId)
             putExtra(AlarmReceiver.EXTRA_EVENT_NAME, eventName)
             putExtra(AlarmReceiver.EXTRA_CUSTOMER_NAME, customerName)
+            putExtra(AlarmReceiver.EXTRA_CUSTOMER_MOBILE, customerMobile)
             putExtra(AlarmReceiver.EXTRA_EVENT_TIME, eventTime)
             putExtra(AlarmReceiver.EXTRA_EVENT_LOCATION, eventLocation)
         }

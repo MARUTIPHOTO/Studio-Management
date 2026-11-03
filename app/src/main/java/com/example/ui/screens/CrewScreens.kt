@@ -935,7 +935,7 @@ fun CrewCardItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "📱 ${crew.mobile}",
+                text = "📱 ${crew.displayMobile}",
                 fontSize = 13.sp,
                 color = StudioDarkText,
                 fontWeight = FontWeight.Medium

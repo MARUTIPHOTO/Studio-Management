@@ -20,8 +20,14 @@ interface CustomerDao {
     @Query("SELECT * FROM customers ORDER BY id DESC")
     fun getAllCustomers(): Flow<List<Customer>>
 
+    @Query("SELECT * FROM customers")
+    suspend fun getAllCustomersSync(): List<Customer>
+
     @Query("SELECT * FROM customers WHERE id = :id LIMIT 1")
     suspend fun getCustomerById(id: Long): Customer?
+
+    @Query("SELECT * FROM customers WHERE id = :id LIMIT 1")
+    fun getCustomerByIdDirect(id: Long): Customer?
 
     @Query("SELECT * FROM customers WHERE mobile = :mobile LIMIT 1")
     suspend fun findCustomerByMobile(mobile: String): Customer?
@@ -58,6 +64,12 @@ interface EventDao {
 
     @Query("SELECT * FROM events WHERE id = :id LIMIT 1")
     suspend fun getEventById(id: Long): EventBooking?
+
+    @Query("SELECT * FROM events WHERE id = :id LIMIT 1")
+    fun getEventByIdDirect(id: Long): EventBooking?
+
+    @Query("SELECT * FROM events WHERE customerId = :customerId")
+    suspend fun getEventsForCustomerSync(customerId: Long): List<EventBooking>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvent(event: EventBooking): Long
@@ -100,6 +112,9 @@ interface EventDao {
 interface CrewDao {
     @Query("SELECT * FROM crew_members ORDER BY id DESC")
     fun getAllCrew(): Flow<List<CrewMember>>
+
+    @Query("SELECT * FROM crew_members")
+    suspend fun getAllCrewSync(): List<CrewMember>
 
     @Query("SELECT * FROM crew_members WHERE id = :id LIMIT 1")
     suspend fun getCrewById(id: Long): CrewMember?

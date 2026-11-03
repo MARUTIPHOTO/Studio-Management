@@ -429,7 +429,7 @@ fun EventDetailsScreen(
                             ) {
                                 Column {
                                     Text(crew.name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = StudioDarkText)
-                                    Text("${crew.role} • ${crew.mobile}", fontSize = 12.sp, color = StudioSecondaryGray)
+                                    Text("${crew.role} • ${crew.displayMobile}", fontSize = 12.sp, color = StudioSecondaryGray)
                                 }
                                 Icon(Icons.Default.Call, contentDescription = "Call", tint = StudioGreenDark)
                             }

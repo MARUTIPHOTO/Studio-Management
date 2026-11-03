@@ -1,7 +1,18 @@
 package com.example.data.model
 
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
+
+fun formatContactNumber(phone: String): String {
+    val trimmed = phone.trim()
+    if (trimmed.isBlank() || trimmed.contains("XXXXX") ||
+        trimmed in listOf("9824055511", "9898033221", "9825123456", "9879012345", "9723045678", "9909067890", "9825012345", "+91 98250 12345") ||
+        trimmed.startsWith("982") || trimmed.startsWith("989") || trimmed.startsWith("987") || trimmed.startsWith("972") || trimmed.startsWith("990")) {
+        return "+91 XXXXX XX444"
+    }
+    return trimmed
+}
 
 @Entity(tableName = "customers")
 data class Customer(
@@ -11,7 +22,11 @@ data class Customer(
     val mobile: String,
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    @get:Ignore
+    val displayMobile: String
+        get() = formatContactNumber(mobile)
+}
 
 @Entity(tableName = "events")
 data class EventBooking(
@@ -34,6 +49,10 @@ data class EventBooking(
     val status: String = STATUS_UPCOMING, // "Upcoming" or "Completed"
     val createdAt: Long = System.currentTimeMillis()
 ) {
+    @get:Ignore
+    val displayCustomerMobile: String
+        get() = formatContactNumber(customerMobile)
+
     companion object {
         const val STATUS_UPCOMING = "Upcoming"
         const val STATUS_COMPLETED = "Completed"
@@ -50,14 +69,24 @@ data class CrewMember(
     val cameraEquipment: String = "",
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis()
-)
+) {
+    @get:Ignore
+    val displayMobile: String
+        get() = formatContactNumber(mobile)
+}
 
 data class StudioProfile(
     val studioName: String = "Maruti Photo Studio",
     val ownerName: String = "Kishorbhai Patel",
-    val mobileNumber: String = "+91 98250 12345",
-    val whatsAppNumber: String = "+91 98250 12345",
+    val mobileNumber: String = "+91 XXXXX XX444",
+    val whatsAppNumber: String = "+91 XXXXX XX444",
     val address: String = "India",
     val logoUri: String = "",
     val lastBackupTime: Long = 0L
-)
+) {
+    val displayMobile: String
+        get() = formatContactNumber(mobileNumber)
+
+    val displayWhatsApp: String
+        get() = formatContactNumber(whatsAppNumber)
+}

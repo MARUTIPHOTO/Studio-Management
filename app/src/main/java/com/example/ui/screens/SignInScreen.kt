@@ -26,10 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -37,7 +35,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -46,9 +43,9 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,7 +71,6 @@ import com.example.ui.theme.StudioDarkText
 import com.example.ui.theme.StudioGreenDark
 import com.example.ui.theme.StudioGreenLight
 import com.example.ui.theme.StudioRedDark
-import com.example.ui.theme.StudioRedLight
 import com.example.ui.theme.StudioRedPrimary
 import com.example.ui.theme.StudioSecondaryGray
 import kotlinx.coroutines.launch
@@ -90,6 +86,7 @@ fun SignInScreen(
     authManager: AuthManager,
     onSignInSuccess: () -> Unit,
     modifier: Modifier = Modifier,
+    onContinueAsGuest: () -> Unit = onSignInSuccess,
     onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -98,16 +95,16 @@ fun SignInScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var successMessage by remember { mutableStateOf<String?>(null) }
 
-    // 0 = Google Login, 1 = Email Login, 2 = New Account (Sign Up)
-    var authMode by remember { mutableStateOf(0) }
+    // 3 Options Only:
+    // 0 = Login (લૉગિન)
+    // 1 = Sign In (સાઇન ઇન)
+    // 2 = Google Sign In (Google સાઇન ઇન)
+    var selectedOption by remember { mutableIntStateOf(0) }
 
     var emailInput by remember { mutableStateOf("") }
     var passwordInput by remember { mutableStateOf("") }
     var confirmPasswordInput by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
-
-    var showForgotPasswordDialog by remember { mutableStateOf(false) }
-    var resetEmailInput by remember { mutableStateOf("") }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -117,14 +114,14 @@ fun SignInScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Studio Brand Logo with Camera Icon & Gradient
+            // App Brand Header
             Box(
                 modifier = Modifier
-                    .size(92.dp)
+                    .size(80.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -137,49 +134,30 @@ fun SignInScreen(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = "Studio Camera",
                     tint = Color.White,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(42.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
                 text = "Studio Management",
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = StudioDarkText,
                 textAlign = TextAlign.Center
             )
 
-            Text(
-                text = "સ્ટુડિયો મેનેજમેન્ટ",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = StudioRedPrimary,
-                modifier = Modifier.padding(top = 4.dp),
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "ગ્રાહક, ઇવેન્ટ અને કેમેરા ક્રૂ ડેટા સુરક્ષિત સાચવવા લૉગિન કરો.",
-                fontSize = 13.sp,
-                color = StudioSecondaryGray,
-                textAlign = TextAlign.Center,
-                lineHeight = 18.sp
-            )
-
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Auth Mode Selector: Google vs Email Login vs Register
+            // 3 Options Tabs: Login | Sign In | Google Sign In
             TabRow(
-                selectedTabIndex = authMode,
+                selectedTabIndex = selectedOption,
                 containerColor = Color.White,
                 contentColor = StudioRedPrimary,
                 indicator = { tabPositions ->
                     TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(tabPositions[authMode]),
+                        Modifier.tabIndicatorOffset(tabPositions[selectedOption]),
                         color = StudioRedPrimary
                     )
                 },
@@ -189,46 +167,46 @@ fun SignInScreen(
                     .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
             ) {
                 Tab(
-                    selected = authMode == 0,
+                    selected = selectedOption == 0,
                     onClick = {
-                        authMode = 0
+                        selectedOption = 0
                         errorMessage = null
                         successMessage = null
                     },
                     text = {
                         Text(
-                            text = "Google લૉગિન",
-                            fontWeight = if (authMode == 0) FontWeight.Bold else FontWeight.Normal,
+                            text = "Login",
+                            fontWeight = if (selectedOption == 0) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp
                         )
                     }
                 )
                 Tab(
-                    selected = authMode == 1,
+                    selected = selectedOption == 1,
                     onClick = {
-                        authMode = 1
+                        selectedOption = 1
                         errorMessage = null
                         successMessage = null
                     },
                     text = {
                         Text(
-                            text = "ઈમેલ લૉગિન",
-                            fontWeight = if (authMode == 1) FontWeight.Bold else FontWeight.Normal,
+                            text = "Sign In",
+                            fontWeight = if (selectedOption == 1) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp
                         )
                     }
                 )
                 Tab(
-                    selected = authMode == 2,
+                    selected = selectedOption == 2,
                     onClick = {
-                        authMode = 2
+                        selectedOption = 2
                         errorMessage = null
                         successMessage = null
                     },
                     text = {
                         Text(
-                            text = "નવું ખાતું",
-                            fontWeight = if (authMode == 2) FontWeight.Bold else FontWeight.Normal,
+                            text = "Google",
+                            fontWeight = if (selectedOption == 2) FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp
                         )
                     }
@@ -237,45 +215,184 @@ fun SignInScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Error Message Banner
+            // Error Alert
             AnimatedVisibility(visible = errorMessage != null) {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF9A9A)),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 14.dp)
+                        .padding(bottom = 12.dp)
+                ) {
+                    Text(
+                        text = errorMessage ?: "",
+                        color = Color(0xFFC62828),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
+
+            // Success Alert
+            AnimatedVisibility(visible = successMessage != null) {
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = StudioGreenLight),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA5D6A7)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    Text(
+                        text = successMessage ?: "",
+                        color = StudioGreenDark,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(12.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Option 0: Login (ઈમેલ અને પાસવર્ડ)
+            if (selectedOption == 0) {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Text(
-                            text = errorMessage ?: "",
-                            color = Color(0xFFC62828),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Start,
-                            lineHeight = 18.sp
+                            text = "Login to Studio",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioDarkText
                         )
-                        if (authMode != 0) {
-                            Button(
-                                onClick = {
-                                    authMode = 0
-                                    errorMessage = null
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(40.dp)
-                            ) {
+
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = {
+                                emailInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Email") },
+                            placeholder = { Text("Enter your email") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = StudioRedPrimary)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = StudioRedPrimary,
+                                focusedLabelColor = StudioRedPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_email_field")
+                        )
+
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = {
+                                passwordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Password") },
+                            placeholder = { Text("Enter your password") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = StudioRedPrimary)
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                        tint = StudioSecondaryGray
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = StudioRedPrimary,
+                                focusedLabelColor = StudioRedPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("login_password_field")
+                        )
+
+                        Button(
+                            onClick = {
+                                val cleanEmail = emailInput.trim().lowercase()
+                                val cleanPass = passwordInput.trim()
+
+                                if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
+                                    errorMessage = "Please enter a valid email address."
+                                    return@Button
+                                }
+                                if (cleanPass.isEmpty()) {
+                                    errorMessage = "Please enter your password."
+                                    return@Button
+                                }
+
+                                val authPrefs = context.getSharedPreferences("maruti_studio_auth_prefs", Context.MODE_PRIVATE)
+                                val savedPass = authPrefs.getString("pass_${cleanEmail}", null)
+
+                                if (savedPass != null && savedPass != cleanPass) {
+                                    errorMessage = "પાસવર્ડ મેળ ખાતો નથી. સાચો પાસવર્ડ દાખલ કરો."
+                                    return@Button
+                                }
+
+                                authPrefs.edit()
+                                    .putString("pass_${cleanEmail}", cleanPass)
+                                    .putString("saved_email", cleanEmail)
+                                    .putString("local_session", "active")
+                                    .apply()
+
+                                successMessage = "Login Successful!"
+                                onSignInSuccess()
+                            },
+                            enabled = !isLoading,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StudioRedPrimary,
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("login_submit_btn")
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Logging in...")
+                            } else {
                                 Text(
-                                    text = "Google સાઇન-ઇન વાપરો (૧-ક્લિક)",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    text = "Login",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -283,54 +400,199 @@ fun SignInScreen(
                 }
             }
 
-            // Success Message Banner
-            AnimatedVisibility(visible = successMessage != null) {
+            // Option 1: Sign In (નવું ખાતું બનાવો)
+            if (selectedOption == 1) {
                 Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = StudioGreenLight),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA5D6A7)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 14.dp)
-                ) {
-                    Text(
-                        text = successMessage ?: "",
-                        color = StudioGreenDark,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(14.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            if (authMode == 0) {
-                // Tab 0: Google Sign-In Card
-                Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Text(
+                            text = "Create Account (Sign In)",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioDarkText
+                        )
+
+                        OutlinedTextField(
+                            value = emailInput,
+                            onValueChange = {
+                                emailInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Email") },
+                            placeholder = { Text("Enter your email") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Email, contentDescription = null, tint = StudioRedPrimary)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = StudioRedPrimary,
+                                focusedLabelColor = StudioRedPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("signin_email_field")
+                        )
+
+                        OutlinedTextField(
+                            value = passwordInput,
+                            onValueChange = {
+                                passwordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Password (min 6 characters)") },
+                            placeholder = { Text("Enter password") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = StudioRedPrimary)
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                                    Icon(
+                                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                                        tint = StudioSecondaryGray
+                                    )
+                                }
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Next
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = StudioRedPrimary,
+                                focusedLabelColor = StudioRedPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("signin_password_field")
+                        )
+
+                        OutlinedTextField(
+                            value = confirmPasswordInput,
+                            onValueChange = {
+                                confirmPasswordInput = it
+                                errorMessage = null
+                            },
+                            label = { Text("Confirm Password") },
+                            placeholder = { Text("Re-enter password") },
+                            leadingIcon = {
+                                Icon(Icons.Default.Lock, contentDescription = null, tint = StudioRedPrimary)
+                            },
+                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = StudioRedPrimary,
+                                focusedLabelColor = StudioRedPrimary
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("signin_confirm_password_field")
+                        )
+
+                        Button(
+                            onClick = {
+                                val cleanEmail = emailInput.trim().lowercase()
+                                val cleanPass = passwordInput.trim()
+
+                                if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
+                                    errorMessage = "Please enter a valid email address."
+                                    return@Button
+                                }
+                                if (cleanPass.length < 6) {
+                                    errorMessage = "Password must be at least 6 characters."
+                                    return@Button
+                                }
+                                if (cleanPass != confirmPasswordInput.trim()) {
+                                    errorMessage = "Passwords do not match."
+                                    return@Button
+                                }
+
+                                val authPrefs = context.getSharedPreferences("maruti_studio_auth_prefs", Context.MODE_PRIVATE)
+                                authPrefs.edit()
+                                    .putString("pass_${cleanEmail}", cleanPass)
+                                    .putString("saved_email", cleanEmail)
+                                    .putString("local_session", "active")
+                                    .apply()
+
+                                successMessage = "Account Created Successfully!"
+                                onSignInSuccess()
+                            },
+                            enabled = !isLoading,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = StudioRedPrimary,
+                                contentColor = Color.White
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("signin_submit_btn")
+                        ) {
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Creating account...")
+                            } else {
+                                Text(
+                                    text = "Sign In (Create Account)",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Option 2: Google Sign In (Google સાઇન ઇન)
+            if (selectedOption == 2) {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "સિંગલ-ટેપથી Google એકાઉન્ટ વડે લૉગિન કરો",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = StudioDarkText,
-                            textAlign = TextAlign.Center
+                            text = "Sign in with Google",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = StudioDarkText
                         )
 
-                        // Google Sign-In Button
                         Button(
                             onClick = {
                                 val activity = context.findActivity()
                                 if (activity == null) {
-                                    errorMessage = "લૉગિન શરૂ કરી શકાયું નથી. કૃપા કરીને ફરી પ્રયાસ કરો."
+                                    errorMessage = "Unable to start Google Sign-In."
                                     return@Button
                                 }
                                 isLoading = true
@@ -339,11 +601,13 @@ fun SignInScreen(
                                 coroutineScope.launch {
                                     val result = authManager.signInWithGoogle(activity)
                                     isLoading = false
-                                    result.onSuccess {
-                                        successMessage = "સફળતાપૂર્વક લૉગિન થયું!"
+                                    result.onSuccess { user ->
+                                        context.getSharedPreferences("maruti_studio_auth_prefs", Context.MODE_PRIVATE)
+                                            .edit().putString("saved_email", user.email ?: "").putString("local_session", "active").apply()
+                                        successMessage = "Google Sign-In Successful!"
                                         onSignInSuccess()
                                     }.onFailure { err ->
-                                        errorMessage = err.localizedMessage ?: "Google લૉગિન નિષ્ફળ ગયું."
+                                        errorMessage = err.localizedMessage ?: "Google Sign-In failed."
                                     }
                                 }
                             },
@@ -353,10 +617,10 @@ fun SignInScreen(
                                 containerColor = Color.White,
                                 contentColor = StudioDarkText
                             ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
+                                .height(50.dp)
                                 .border(1.dp, Color(0xFFDADCE0), RoundedCornerShape(12.dp))
                                 .testTag("google_sign_in_button")
                         ) {
@@ -364,10 +628,10 @@ fun SignInScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
                                     color = StudioRedPrimary,
-                                    strokeWidth = 2.5.dp
+                                    strokeWidth = 2.dp
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("લૉગિન થઈ રહ્યું છે...", fontSize = 14.sp)
+                                Text("Signing in...")
                             } else {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -391,7 +655,7 @@ fun SignInScreen(
                                     Text(
                                         text = "Google દ્વારા સાઇન ઇન કરો",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
+                                        fontSize = 14.sp,
                                         color = StudioDarkText
                                     )
                                 }
@@ -399,345 +663,9 @@ fun SignInScreen(
                         }
                     }
                 }
-            } else {
-                // Tab 1 & 2: Email & Password Form (Login or Create Account)
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = if (authMode == 1) "તમારા ઈમેલ અને પાસવર્ડથી લૉગિન કરો" else "નવું ખાતું બનાવો (Create Account)",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = StudioDarkText
-                        )
-
-                        // Helpful Guidance Banner
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFE8F0FE))
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "💡 સલાહ: ૧-ક્લિકમાં સરળતાથી લૉગિન કરવા માટે 'Google લૉગિન' ટેબ વાપરો.",
-                                fontSize = 11.sp,
-                                color = Color(0xFF1967D2),
-                                lineHeight = 15.sp
-                            )
-                        }
-
-                        // Email Field
-                        OutlinedTextField(
-                            value = emailInput,
-                            onValueChange = {
-                                emailInput = it
-                                errorMessage = null
-                            },
-                            label = { Text("ઈમેલ સરનામું (Email)") },
-                            placeholder = { Text("તમારો ઈમેલ દાખલ કરો") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Email, contentDescription = null, tint = StudioRedPrimary)
-                            },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
-                                imeAction = ImeAction.Next
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = StudioRedPrimary,
-                                focusedLabelColor = StudioRedPrimary
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("email_input_field")
-                        )
-
-                        // Password Field
-                        OutlinedTextField(
-                            value = passwordInput,
-                            onValueChange = {
-                                passwordInput = it
-                                errorMessage = null
-                            },
-                            label = { Text("પાસવર્ડ (Password)") },
-                            placeholder = { Text("ઓછામાં ઓછા 6 અક્ષરો") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Lock, contentDescription = null, tint = StudioRedPrimary)
-                            },
-                            trailingIcon = {
-                                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                    Icon(
-                                        imageVector = if (isPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = null,
-                                        tint = StudioSecondaryGray
-                                    )
-                                }
-                            },
-                            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = if (authMode == 1) ImeAction.Done else ImeAction.Next
-                            ),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = StudioRedPrimary,
-                                focusedLabelColor = StudioRedPrimary
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("password_input_field")
-                        )
-
-                        // Confirm Password (Sign-Up only)
-                        if (authMode == 2) {
-                            OutlinedTextField(
-                                value = confirmPasswordInput,
-                                onValueChange = {
-                                    confirmPasswordInput = it
-                                    errorMessage = null
-                                },
-                                label = { Text("પાસવર્ડ ફરી દાખલ કરો") },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, contentDescription = null, tint = StudioRedPrimary)
-                                },
-                                visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Password,
-                                    imeAction = ImeAction.Done
-                                ),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = StudioRedPrimary,
-                                    focusedLabelColor = StudioRedPrimary
-                                ),
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("confirm_password_input_field")
-                            )
-                        }
-
-                        // Forgot Password Link (for Login tab)
-                        if (authMode == 1) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                TextButton(onClick = {
-                                    resetEmailInput = emailInput.trim()
-                                    showForgotPasswordDialog = true
-                                }) {
-                                    Text(
-                                        text = "પાસવર્ડ ભૂલી ગયા છો?",
-                                        fontSize = 12.sp,
-                                        color = StudioRedPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-
-                        // Submit Button
-                        Button(
-                            onClick = {
-                                val cleanEmail = emailInput.trim()
-                                val cleanPass = passwordInput.trim()
-
-                                if (cleanEmail.isEmpty() || !cleanEmail.contains("@")) {
-                                    errorMessage = "કૃપા કરીને સાચું ઈમેલ સરનામું દાખલ કરો."
-                                    return@Button
-                                }
-                                if (cleanPass.length < 6) {
-                                    errorMessage = "પાસવર્ડ ઓછામાં ઓછો 6 અક્ષરોનો હોવો જોઈએ."
-                                    return@Button
-                                }
-                                if (authMode == 2 && cleanPass != confirmPasswordInput.trim()) {
-                                    errorMessage = "બંને પાસવર્ડ મેળ ખાતા નથી."
-                                    return@Button
-                                }
-
-                                isLoading = true
-                                errorMessage = null
-                                successMessage = null
-
-                                coroutineScope.launch {
-                                    if (authMode == 1) {
-                                        // Email Login
-                                        val result = authManager.signInWithEmailAndPassword(cleanEmail, cleanPass)
-                                        isLoading = false
-                                        result.onSuccess {
-                                            successMessage = "સફળતાપૂર્વક લૉગિન થયું!"
-                                            onSignInSuccess()
-                                        }.onFailure { err ->
-                                            errorMessage = err.localizedMessage ?: "લૉગિન નિષ્ફળ ગયું."
-                                        }
-                                    } else {
-                                        // Email Sign-Up
-                                        val result = authManager.createUserWithEmailAndPassword(cleanEmail, cleanPass)
-                                        isLoading = false
-                                        result.onSuccess {
-                                            successMessage = "એકાઉન્ટ સફળતાપૂર્વક બન્યું! લૉગિન થઈ રહ્યું છે..."
-                                            onSignInSuccess()
-                                        }.onFailure { err ->
-                                            errorMessage = err.localizedMessage ?: "એકાઉન્ટ બની શક્યું નહીં."
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !isLoading,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = StudioRedPrimary,
-                                contentColor = Color.White
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .testTag("email_auth_submit_btn")
-                        ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text("પ્રક્રિયા થઈ રહી છે...")
-                            } else {
-                                Text(
-                                    text = if (authMode == 1) "લૉગિન કરો (Sign In)" else "ખાતું બનાવો (Create Account)",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Zero-trust data privacy badge
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Security,
-                    contentDescription = null,
-                    tint = StudioGreenDark,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "તમારો તમામ ડેટા ખાનગી છે, અન્ય કોઈ વપરાશકર્તા જોઈ શકશે નહીં.",
-                    fontSize = 11.sp,
-                    color = StudioSecondaryGray,
-                    textAlign = TextAlign.Center
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-
-    // Forgot Password Dialog
-    if (showForgotPasswordDialog) {
-        var dialogError by remember { mutableStateOf<String?>(null) }
-        var isSendingReset by remember { mutableStateOf(false) }
-        var dialogSuccess by remember { mutableStateOf<String?>(null) }
-
-        AlertDialog(
-            onDismissRequest = {
-                if (!isSendingReset) showForgotPasswordDialog = false
-            },
-            title = {
-                Text(
-                    text = "પાસવર્ડ રીસેટ કરો",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = "તમારું ઈમેલ સરનામું દાખલ કરો. અમે તમને પાસવર્ડ રીસેટ કરવાની લિંક મોકલીશું.",
-                        fontSize = 13.sp,
-                        color = StudioSecondaryGray
-                    )
-                    OutlinedTextField(
-                        value = resetEmailInput,
-                        onValueChange = {
-                            resetEmailInput = it
-                            dialogError = null
-                        },
-                        label = { Text("ઈમેલ સરનામું") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (dialogError != null) {
-                        Text(
-                            text = dialogError ?: "",
-                            color = Color(0xFFC62828),
-                            fontSize = 12.sp
-                        )
-                    }
-                    if (dialogSuccess != null) {
-                        Text(
-                            text = dialogSuccess ?: "",
-                            color = StudioGreenDark,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val clean = resetEmailInput.trim()
-                        if (clean.isEmpty() || !clean.contains("@")) {
-                            dialogError = "કૃપા કરીને માન્ય ઈમેલ દાખલ કરો."
-                            return@Button
-                        }
-                        isSendingReset = true
-                        dialogError = null
-                        coroutineScope.launch {
-                            val res = authManager.sendPasswordResetEmail(clean)
-                            isSendingReset = false
-                            res.onSuccess {
-                                dialogSuccess = "રીસેટ લિંક ઈમેલ પર મોકલી દેવામાં આવી છે."
-                            }.onFailure { err ->
-                                dialogError = err.localizedMessage ?: "લિંક મોકલી શકાઈ નથી."
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = StudioRedPrimary)
-                ) {
-                    Text("લિંક મોકલો")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showForgotPasswordDialog = false }) {
-                    Text("બંધ કરો")
-                }
-            }
-        )
     }
 }
