@@ -1412,7 +1412,9 @@ fun EditCrewScreen(
 
     val predefinedRole = ALL_CREW_ROLES.find { it.title.equals(crew?.role, ignoreCase = true) }
     var name by remember(crew) { mutableStateOf(crew?.name ?: "") }
-    var mobile by remember(crew) { mutableStateOf(crew?.mobile ?: "") }
+    var mobile by remember(crew) {
+        mutableStateOf(if (crew?.mobile?.contains("XXXXX") == true) "" else crew?.mobile ?: "")
+    }
     var selectedRole by remember(crew) {
         mutableStateOf(predefinedRole?.title ?: if (crew?.role?.isNotBlank() == true) "Other" else "Traditional Photographer")
     }

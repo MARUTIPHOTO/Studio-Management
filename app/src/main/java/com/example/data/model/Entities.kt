@@ -4,15 +4,25 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
+val OLD_SAMPLE_NUMBERS = setOf(
+    "9824055511", "9898033221", "9825123456", "9879012345",
+    "9723045678", "9909067890", "9825012345", "+91 98250 12345"
+)
+
 fun formatContactNumber(phone: String): String {
     val trimmed = phone.trim()
-    if (trimmed.isBlank() || trimmed.contains("XXXXX") ||
-        trimmed in listOf("9824055511", "9898033221", "9825123456", "9879012345", "9723045678", "9909067890", "9825012345", "+91 98250 12345") ||
-        trimmed.startsWith("982") || trimmed.startsWith("989") || trimmed.startsWith("987") || trimmed.startsWith("972") || trimmed.startsWith("990")) {
+    if (trimmed.isBlank()) return ""
+    if (trimmed.contains("XXXXX") || trimmed in OLD_SAMPLE_NUMBERS) {
         return "+91 XXXXX XX444"
     }
-    return trimmed
+    val digits = trimmed.filter { it.isDigit() }
+    return when {
+        digits.length == 10 -> "+91 $digits"
+        digits.length == 12 && digits.startsWith("91") -> "+91 ${digits.substring(2)}"
+        else -> trimmed
+    }
 }
+
 
 @Entity(tableName = "customers")
 data class Customer(

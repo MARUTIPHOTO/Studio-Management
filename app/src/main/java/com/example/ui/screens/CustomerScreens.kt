@@ -554,7 +554,9 @@ fun EditCustomerScreen(
     val customer = customers.find { it.id == customerId }
 
     var name by remember(customer) { mutableStateOf(customer?.name ?: "") }
-    var mobile by remember(customer) { mutableStateOf(customer?.mobile ?: "") }
+    var mobile by remember(customer) {
+        mutableStateOf(if (customer?.mobile?.contains("XXXXX") == true) "" else customer?.mobile ?: "")
+    }
     var note by remember(customer) { mutableStateOf(customer?.note ?: "") }
 
     var nameError by remember { mutableStateOf<String?>(null) }

@@ -8,6 +8,7 @@ import com.example.data.model.Customer
 import com.example.data.model.EventBooking
 import com.example.data.model.StudioProfile
 import com.example.data.model.formatContactNumber
+import com.example.data.model.OLD_SAMPLE_NUMBERS
 import com.example.ui.strings.AppLanguage
 import com.example.receiver.AlarmScheduler
 import kotlinx.coroutines.Dispatchers
@@ -213,11 +214,11 @@ class StudioRepository(private val context: Context) {
         val savedWhatsApp = prefs.getString("whatsapp_number", null)
 
         val cleanMobile = when {
-            savedMobile == null || savedMobile.isBlank() || savedMobile.contains("98250") -> "+91 XXXXX XX444"
+            savedMobile == null || savedMobile.isBlank() || savedMobile.contains("XXXXX") || savedMobile.trim() in OLD_SAMPLE_NUMBERS -> "+91 XXXXX XX444"
             else -> savedMobile
         }
         val cleanWhatsApp = when {
-            savedWhatsApp == null || savedWhatsApp.isBlank() || savedWhatsApp.contains("98250") -> "+91 XXXXX XX444"
+            savedWhatsApp == null || savedWhatsApp.isBlank() || savedWhatsApp.contains("XXXXX") || savedWhatsApp.trim() in OLD_SAMPLE_NUMBERS -> "+91 XXXXX XX444"
             else -> savedWhatsApp
         }
 
@@ -614,23 +615,20 @@ class StudioRepository(private val context: Context) {
         try {
             val customers = customerDao.getAllCustomersSync()
             for (c in customers) {
-                val formatted = formatContactNumber(c.mobile)
-                if (formatted != c.mobile) {
-                    customerDao.updateCustomer(c.copy(mobile = formatted))
+                if (c.mobile.trim() in OLD_SAMPLE_NUMBERS) {
+                    customerDao.updateCustomer(c.copy(mobile = "+91 XXXXX XX444"))
                 }
             }
             val crew = crewDao.getAllCrewSync()
             for (cr in crew) {
-                val formatted = formatContactNumber(cr.mobile)
-                if (formatted != cr.mobile) {
-                    crewDao.updateCrew(cr.copy(mobile = formatted))
+                if (cr.mobile.trim() in OLD_SAMPLE_NUMBERS) {
+                    crewDao.updateCrew(cr.copy(mobile = "+91 XXXXX XX444"))
                 }
             }
             val events = eventDao.getAllEventsSync()
             for (ev in events) {
-                val formatted = formatContactNumber(ev.customerMobile)
-                if (formatted != ev.customerMobile) {
-                    eventDao.updateEvent(ev.copy(customerMobile = formatted))
+                if (ev.customerMobile.trim() in OLD_SAMPLE_NUMBERS) {
+                    eventDao.updateEvent(ev.copy(customerMobile = "+91 XXXXX XX444"))
                 }
             }
         } catch (e: Exception) {

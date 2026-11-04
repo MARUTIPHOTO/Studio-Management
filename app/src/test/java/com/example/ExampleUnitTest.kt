@@ -80,4 +80,22 @@ class ExampleUnitTest {
     assertNotNull(hindi.admobBannerToggleLabel)
     assertNotNull(english.admobBannerToggleLabel)
   }
+
+  @Test
+  fun testPhoneNormalizationAndFormatting() {
+    assertEquals("9825012345", com.example.data.repository.StudioRepository.normalizePhone("9825012345"))
+    assertEquals("9825012345", com.example.data.repository.StudioRepository.normalizePhone("+91 98250 12345"))
+    assertEquals("9825012345", com.example.data.repository.StudioRepository.normalizePhone("09825012345"))
+
+    // Test formatContactNumber:
+    // Real numbers should NOT be masked
+    assertEquals("+91 9825099999", com.example.data.model.formatContactNumber("9825099999"))
+    assertEquals("+91 9879055555", com.example.data.model.formatContactNumber("+91 9879055555"))
+    assertEquals("+91 9723011111", com.example.data.model.formatContactNumber("9723011111"))
+
+    // Only dummy/sample numbers should be masked
+    assertEquals("+91 XXXXX XX444", com.example.data.model.formatContactNumber("+91 XXXXX XX444"))
+    assertEquals("+91 XXXXX XX444", com.example.data.model.formatContactNumber("9824055511"))
+  }
 }
+
